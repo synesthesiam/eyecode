@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>eyeCode Fixation Viewer</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        <!-- Bootstrap -->
+        <link href="css/bootstrap.min.css" rel="stylesheet" media="screen">
+
+        <!-- Custom styles -->
+        <link href="css/style.css" rel="stylesheet" media="screen">
+    </head>
+    <body>
+        <!-- Fixation navbar -->
+        <div class="navbar navbar-fixed-bottom">
+            <div class="navbar-inner">
+
+                <!-- Brand label -->
+                <a id="brand" class="brand" href="#">
+                    <img src="img/fixation-viewer-21.png" />
+                    Fixation Viewer
+                </a>
+
+                <!-- Fixation number text box -->
+                <form class="navbar-search pull-left" onsubmit="return false">
+                    <input id="fix-index" type="text" class="search-query" value="1"
+                           onChange="javascipt:set_fixation_from_text()">
+                </form>
+
+                <!-- First fixation button -->
+                <a class="btn btn-inverse" onclick="javascript:first_fixation();">&lt;&lt;</a>
+
+                <!-- Previous fixation button -->
+                <a class="btn btn-primary" onclick="javascript:prev_fixation();">&lt;</a>
+
+                <!-- Next fixation button -->
+                <a class="btn btn-primary" onclick="javascript:next_fixation();">&gt;</a>
+
+                <!-- Last fixation button -->
+                <a class="btn btn-inverse" onclick="javascript:last_fixation();">&gt;&gt;</a>
+
+                <!-- Play/stop button -->
+                <a id="play-button" class="btn btn-success" onclick="javascipt:togglePlay();">
+                    <i class="icon-play icon-white"></i>
+                </a>
+
+                <!-- Current time in minutes:seconds:millis -->
+                <span id="time-label" style="">00:00:000</span>
+
+                <!-- AOI kind to show -->
+                <div id="aoi-menu" class="btn-group dropup">
+                    <a class="btn btn-info dropdown-toggle" data-toggle="dropdown" href="#">
+                        AOIs
+                        <span class="caret"></span>
+                    </a>
+                    <ul id="aoi-kinds" class="dropdown-menu">
+                        <!-- AOI kinds -->
+                    </ul>
+                </div>
+
+                <!-- Progress bar for entire trial -->
+                <div id="progress-bar"></div>
+            </div>
+        </div>
+
+        <!-- Preload line images (for fixation lines) -->
+        <div id="preload" style="height: 0; overflow: hidden;">
+            <img src="img/1up.gif" />
+            <img src="img/1down.gif" />
+            <img src="img/2up.gif" />
+            <img src="img/2down.gif" />
+            <img src="img/4up.gif" />
+            <img src="img/4down.gif" />
+            <img src="img/8up.gif" />
+            <img src="img/8down.gif" />
+            <img src="img/16up.gif" />
+            <img src="img/16down.gif" />
+            <img src="img/32up.gif" />
+            <img src="img/32down.gif" />
+            <img src="img/64up.gif" />
+            <img src="img/64down.gif" />
+            <img src="img/128up.gif" />
+            <img src="img/128down.gif" />
+            <img src="img/256up.gif" />
+            <img src="img/256down.gif" />
+        </div>
+
+        <!-- Program screen image -->
+        <img id="screen" src="" />
+
+        <!-- Current fixation circle -->
+        <div id="eye"></div>
+
+        <!-- Javascript scripts -->
+        <script src="http://code.jquery.com/jquery.js"></script>
+        <script src="js/bootstrap.min.js"></script>
+        <script src="js/tween.js"></script>
+        <script src="js/purl.js" type="text/javascript"></script>
+
+        <!-- Main script -->
+        <script src="js/viewer.js" type="text/javascript"></script>
+
+    </body>
+</html>
