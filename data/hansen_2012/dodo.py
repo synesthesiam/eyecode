@@ -314,6 +314,20 @@ def task_trials():
                 keystroke_count = len(t.xpath("./responses//response"))
                 response_proportion = keystroke_duration_ms / float(duration_ms)
 
+                # Corrections
+                corrections = 0
+                last_len = 0
+                in_correction = False
+                for resp in t.xpath("./responses/response/text()"):
+                    len_resp = len(resp)
+                    if len_resp > last_len:
+                        in_correction = False
+                        last_len = len_resp
+                    elif (len_resp < last_len) and not in_correction:
+                        in_correction = True
+                        last_len = len_resp
+                        corrections += 1
+
                 # Output
                 true_output = t.xpath("./true-output/text()")[0]
                 pred_output = t.xpath("./predicted-output/text()")[0]
@@ -338,15 +352,15 @@ def task_trials():
                 rows.append([trial_id, exp_id, base, version, grade_value, grade_category,
                     started_ms, ended_ms, duration_ms, keystroke_duration_ms,
                     keystroke_count, keystroke_coefficient, response_proportion,
-                    code_chars, code_lines, cyclo_comp, hal_effort, hal_volume,
+                    corrections, code_chars, code_lines, cyclo_comp, hal_effort, hal_volume,
                     output_chars, output_lines, true_output, pred_output,
                     age, degree, gender, py_years, prog_years, cs_major])
 
         cols = ["trial_id", "exp_id", "base", "version", "grade_value",
                 "grade_category", "started_ms", "ended_ms", "duration_ms",
                 "keystroke_duration_ms", "keystroke_count", "keystroke_coefficient",
-                "response_proportion", "code_chars", "code_lines", "cyclo_comp",
-                "hal_effort", "hal_volume", "output_chars", "output_lines",
+                "response_proportion", "response_corrections", "code_chars", "code_lines",
+                "cyclo_comp", "hal_effort", "hal_volume", "output_chars", "output_lines",
                 "true_output", "pred_output", "age", "degree", "gender",
                 "py_years", "prog_years", "cs_major"]
 

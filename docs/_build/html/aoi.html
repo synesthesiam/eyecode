@@ -1,0 +1,392 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Areas of Interest &mdash; eyeCode 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="eyeCode 0.1.0 documentation" href="index.html" />
+    <link rel="next" title="Plotting" href="plot.html" />
+    <link rel="prev" title="Welcome to eyeCode’s documentation!" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="plot.html" title="Plotting"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to eyeCode’s documentation!"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">eyeCode 0.1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Areas of Interest</a><ul>
+<li><a class="reference internal" href="#creating-aois">Creating AOIs</a></li>
+<li><a class="reference internal" href="#hit-testing">Hit Testing</a></li>
+<li><a class="reference internal" href="#utility-methods">Utility Methods</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">Welcome to eyeCode&#8217;s documentation!</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="plot.html"
+                        title="next chapter">Plotting</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/aoi.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="areas-of-interest">
+<h1>Areas of Interest<a class="headerlink" href="#areas-of-interest" title="Permalink to this headline">¶</a></h1>
+<p>In the <tt class="docutils literal"><span class="pre">eyecode</span></tt> library, an area of interest (AOI) is a rectangle that has
+the following properties:</p>
+<blockquote>
+<div><ul class="simple">
+<li>A <em>kind</em> or layer</li>
+<li>A <em>name</em></li>
+<li>A <em>bounding box</em> (x, y, width, height)</li>
+</ul>
+</div></blockquote>
+<p>Multiple kinds of AOIs can be defined, but AOIs within a single kind (or layer)
+should not overlap.  For example, AOIs with a &#8220;line&#8221; kind and a &#8220;token&#8221; kind
+could be defined for a program. Line AOIs should not overlap with each other,
+but they can freely overlap with token AOIs.</p>
+<div class="section" id="creating-aois">
+<h2>Creating AOIs<a class="headerlink" href="#creating-aois" title="Permalink to this headline">¶</a></h2>
+<p>AOIs for lines and whitespace-separated tokens can be automatically identified
+from a black and white image of the code using the <tt class="docutils literal"><span class="pre">find_rectangles</span></tt>
+function.</p>
+<dl class="function">
+<dt id="eyecode.aoi.find_rectangles">
+<tt class="descclassname">eyecode.aoi.</tt><tt class="descname">find_rectangles</tt><big>(</big><em>screen_image</em>, <em>black_thresh=255</em>, <em>white_row_thresh=3</em>, <em>white_col_thresh=3</em>, <em>vert_kind='line'</em>, <em>horz_kind='sub-line'</em><big>)</big><a class="headerlink" href="#eyecode.aoi.find_rectangles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Scans a black and white code image for line and sub-line rectangles.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>screen_image</strong> : PIL.Image</p>
+<blockquote>
+<div><p>Image with code (will be converted to &#8216;L&#8217; mode)</p>
+</div></blockquote>
+<p><strong>black_thresh</strong> : int, optional</p>
+<blockquote>
+<div><p>Luminescence threshold for deciding a pixel is black (default: 255)</p>
+</div></blockquote>
+<p><strong>white_row_thresh</strong> : int, optional</p>
+<blockquote>
+<div><p>Number of white rows before deciding a rectangle is done (default: 3)</p>
+</div></blockquote>
+<p><strong>vert_kind</strong> : str, optional</p>
+<blockquote>
+<div><p>AOI kind to assign to all vertical rectangles (default: line)</p>
+</div></blockquote>
+<p><strong>horz_kind</strong> : str, optional</p>
+<blockquote>
+<div><p>AOI kind to assign to all horizontal rectangles (default: sub-line)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>pandas DataFrame</strong> :</p>
+<blockquote class="last">
+<div><p>A dataframe with rectangle coordinates and sizes</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt><a class="reference internal" href="plot.html#eyecode.plot.aoi.draw_rectangles" title="eyecode.plot.aoi.draw_rectangles"><tt class="xref py py-obj docutils literal"><span class="pre">eyecode.plot.aoi.draw_rectangles</span></tt></a></dt>
+<dd>Visualize AOI rectangles</dd>
+</dl>
+</div>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">eyecode</span> <span class="kn">import</span> <span class="n">aoi</span><span class="p">,</span> <span class="n">data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">code_img</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">busjahn_2013</span><span class="o">.</span><span class="n">program_image</span><span class="p">(</span><span class="s">&quot;basketball&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">code_aois</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">find_rectangles</span><span class="p">(</span><span class="n">code_img</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">code_aois</span><span class="p">[:</span><span class="mi">3</span><span class="p">]</span>
+<span class="go">       kind           name    x   y  width  height</span>
+<span class="go">0      line         line 1  335  28    212      20</span>
+<span class="go">1  sub-line  line 1 part 1  335  28     53      20</span>
+<span class="go">2  sub-line  line 1 part 2  392  28     47      20</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="hit-testing">
+<h2>Hit Testing<a class="headerlink" href="#hit-testing" title="Permalink to this headline">¶</a></h2>
+<p>Assigning fixations to AOIs is done using the <tt class="docutils literal"><span class="pre">hit_test</span></tt> function. As input,
+it takes dataframes with fixations and AOIs. The result is a copy of the
+fixations dataframe with additional columns for each AOI kind. The value of
+each AOI column is the hit AOI name (or NaN if no AOI was hit).</p>
+<p>For example, hit testing fixations with AOIs whose kind was &#8220;line&#8221; and whose
+names were &#8220;line 1&#8221;, &#8220;line 2&#8221;, etc. would result in a dataframe with an
+&#8220;aoi_line&#8221; column. The value in this column would be &#8220;line 1&#8221; when the fixation
+hit line 1, &#8220;line 2&#8221; for line 2, and so on. If no line was hit, the value would
+be NaN (pandas default null value).</p>
+<dl class="function">
+<dt id="eyecode.aoi.hit_test">
+<tt class="descclassname">eyecode.aoi.</tt><tt class="descname">hit_test</tt><big>(</big><em>fixations</em>, <em>aois</em>, <em>offsets=None</em>, <em>hit_fun=&lt;function hit_circle at 0x41bbc08&gt;</em>, <em>hit_radius=20</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#eyecode.aoi.hit_test" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hit tests fixations against AOI rectangles.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>fixations</strong> : pandas DataFrame</p>
+<blockquote>
+<div><p>A DataFrame with fixations to hit test (fix_x, fix_y)</p>
+</div></blockquote>
+<p><strong>aois</strong> : pandas DataFrame</p>
+<blockquote>
+<div><p>A DataFrame with areas of interest (kind, name, x, y, width, height)</p>
+</div></blockquote>
+<p><strong>offsets</strong> : pandas DataFrame or None</p>
+<blockquote>
+<div><p>A DataFrame with different fixations offsets to apply (name, x, y).
+If None, no offset is applied</p>
+</div></blockquote>
+<p><strong>hit_fun</strong> : callable</p>
+<blockquote>
+<div><p>Hit testing function. See hit_point and hit_circle for examples</p>
+</div></blockquote>
+<p><strong>hit_radius</strong> : int</p>
+<blockquote>
+<div><p>Fixation circle radius for hit_circle</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>aoi_fixations</strong> : pandas DataFrame</p>
+<blockquote class="last">
+<div><p>A copy of the fixations DataFrame with additional columns for each
+offset and AOI kind</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Requires the shapely library: <a class="reference external" href="http://toblerity.org/shapely">http://toblerity.org/shapely</a></p>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">eyecode</span> <span class="kn">import</span> <span class="n">aoi</span><span class="p">,</span> <span class="n">data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">code_img</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">busjahn_2013</span><span class="o">.</span><span class="n">program_image</span><span class="p">(</span><span class="s">&quot;basketball&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">code_aois</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">find_rectangles</span><span class="p">(</span><span class="n">code_img</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">raw_fixes</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">busjahn_2013</span><span class="o">.</span><span class="n">raw_fixations</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">raw_fixes</span><span class="p">[:</span><span class="mi">5</span><span class="p">][[</span><span class="s">&quot;trial_id&quot;</span><span class="p">,</span> <span class="s">&quot;start_ms&quot;</span><span class="p">,</span> <span class="s">&quot;fix_x&quot;</span><span class="p">,</span> <span class="s">&quot;fix_y&quot;</span><span class="p">]]</span>
+<span class="go">   trial_id  start_ms       fix_x       fix_y</span>
+<span class="go">0         8       250  423.437500  378.083344</span>
+<span class="go">1         8       567  324.711548   67.538460</span>
+<span class="go">2         8       867  415.625000   -3.750000</span>
+<span class="go">3         8      1284  444.852936  159.117645</span>
+<span class="go">4         8      2034  366.030792  133.842896</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">aoi_fixes</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">hit_test</span><span class="p">(</span><span class="n">raw_fixes</span><span class="p">,</span> <span class="n">sub_line_aois</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">aoi_cols</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">get_aoi_columns</span><span class="p">(</span><span class="n">aoi_fixes</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">aoi_fixes</span><span class="p">[:</span><span class="mi">5</span><span class="p">][[</span><span class="s">&quot;trial_id&quot;</span><span class="p">,</span> <span class="s">&quot;start_ms&quot;</span><span class="p">,</span> <span class="s">&quot;fix_x&quot;</span><span class="p">,</span> <span class="s">&quot;fix_y&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">aoi_cols</span><span class="p">]</span>
+<span class="go">   trial_id  start_ms       fix_x       fix_y aoi_line   aoi_sub-line</span>
+<span class="go">0         8       250  423.437500  378.083344   line 9  line 9 part 1</span>
+<span class="go">1         8       567  324.711548   67.538460      NaN            NaN</span>
+<span class="go">2         8       867  415.625000   -3.750000      NaN            NaN</span>
+<span class="go">3         8      1284  444.852936  159.117645   line 4  line 4 part 2</span>
+<span class="go">4         8      2034  366.030792  133.842896      NaN            NaN</span>
+</pre></div>
+</div>
+</dd></dl>
+
+</div>
+<div class="section" id="utility-methods">
+<h2>Utility Methods<a class="headerlink" href="#utility-methods" title="Permalink to this headline">¶</a></h2>
+<p>Below are a few utility functions for making AOI manipulation easier.</p>
+<dl class="function">
+<dt id="eyecode.aoi.envelope">
+<tt class="descclassname">eyecode.aoi.</tt><tt class="descname">envelope</tt><big>(</big><em>aois</em>, <em>padding=0</em><big>)</big><a class="headerlink" href="#eyecode.aoi.envelope" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a rectangle that envelopes the given AOI rectangles.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>aois</strong> : pandas DataFrame</p>
+<blockquote>
+<div><p>A dataframe with a row for each AOI (x, y, width, height)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>bbox</strong> : list of int</p>
+<blockquote class="last">
+<div><p>Bounding box around all aois (x, y, width, height)</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.aoi.pad">
+<tt class="descclassname">eyecode.aoi.</tt><tt class="descname">pad</tt><big>(</big><em>aois</em>, <em>padding</em><big>)</big><a class="headerlink" href="#eyecode.aoi.pad" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pads the given AOIs.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>aois</strong> : pandas DataFrame</p>
+<blockquote>
+<div><p>A dataframe with a row for each AOI (x, y, width, height)</p>
+</div></blockquote>
+<p><strong>padding</strong> : int or list of int</p>
+<blockquote>
+<div><p>Uniform padding (int) or top, right, bottom, left (list of int)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>padded_aois</strong> : pandas DataFrame</p>
+<blockquote class="last">
+<div><p>A copy of the input aois with padding applied</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.aoi.add_bbox">
+<tt class="descclassname">eyecode.aoi.</tt><tt class="descname">add_bbox</tt><big>(</big><em>aois</em>, <em>bbox</em>, <em>kind</em>, <em>name</em><big>)</big><a class="headerlink" href="#eyecode.aoi.add_bbox" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds a new AOI with the given bounding box, kind, and name.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>aois</strong> : pandas DataFrame</p>
+<blockquote>
+<div><p>A dataframe with a row for each AOI (x, y, width, height)</p>
+</div></blockquote>
+<p><strong>bbox</strong> : list of int</p>
+<blockquote>
+<div><p>Bounding box of new AOI (x, y, width, height)</p>
+</div></blockquote>
+<p><strong>kind</strong> : str</p>
+<blockquote>
+<div><p>New AOI kind</p>
+</div></blockquote>
+<p><strong>name</strong> : str</p>
+<blockquote>
+<div><p>New AOI name</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>more_aois</strong> : pandas DataFrame</p>
+<blockquote class="last">
+<div><p>A copy of the input aois with the new AOI appended</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.aoi.get_aoi_columns">
+<tt class="descclassname">eyecode.aoi.</tt><tt class="descname">get_aoi_columns</tt><big>(</big><em>fixations</em><big>)</big><a class="headerlink" href="#eyecode.aoi.get_aoi_columns" title="Permalink to this definition">¶</a></dt>
+<dd><p>Gets all columns in a dataframe that hold AOI names.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>fixations</strong> : pandas DataFrame</p>
+<blockquote>
+<div><p>A dataframe with a row for each fixation</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>list of str</strong> :</p>
+<blockquote class="last">
+<div><p>Column names that correspond to AOI kinds</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="plot.html" title="Plotting"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="Welcome to eyeCode’s documentation!"
+             >previous</a> |</li>
+        <li><a href="index.html">eyeCode 0.1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Michael Hansen.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

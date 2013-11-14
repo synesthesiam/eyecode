@@ -400,6 +400,34 @@ def response_proportion_by_base(trials, axes=None, figsize=None, colors=kelly_co
 
     return axes
 
+def response_corrections_by_base(trials, axes=None, figsize=None, colors=kelly_colors):
+    tight = False
+    bases = sorted(trials.base.unique())
+
+    if axes is None:
+        fig, _ = pyplot.subplots(nrows=2, ncols=5, figsize=figsize)
+        fig.suptitle("Response Corrections by Program")
+        axes = fig.axes
+        tight = True
+
+    bins = np.arange(0, trials.response_corrections.max() + 1)
+    bin_range = (0, bins[-1])
+
+    for ax, base, color in zip(axes, bases, it.cycle(colors)):
+        b_trials = trials[trials.base == base]
+        rs_corr = b_trials.response_corrections
+
+        rs_corr.hist(ax=ax, color=color, bins=bins, range=bin_range)
+        ax.set_title("{0}, {1} trials".format(base, len(b_trials)))
+        ax.set_xlabel("Response Corrections")
+
+    if tight:
+        fig = axes[0].figure
+        fig.tight_layout()
+        fig.subplots_adjust(top=0.90, hspace=0.25)
+
+    return axes
+
 def hist_by_base(frame, column, base_fun=None, title=None, axes=None, figsize=None, colors=kelly_colors):
     tight = False
     bases = sorted(frame.base.unique())
@@ -711,6 +739,8 @@ def get_fit_name(n):
     n = n[n.rfind("[")+1:]
     if n.endswith("]"):
         n = n[:-1]
+    if (len(n) > 3) and (n[1] == "."):
+        n = n[2:]
     return n
 
 def fit_coefficients(fit, ax=None, figsize=None, skip_intercept=False):
@@ -731,27 +761,46 @@ def fit_coefficients(fit, ax=None, figsize=None, skip_intercept=False):
 
     return ax
 
-def fit_coefficients_base(fit, ax=None, figsize=None):
-    if ax is None:
-        pyplot.figure(figsize=figsize)
-        ax = pyplot.axes()
-
-    means = fit.conf_int().apply(lambda x: np.mean(x), axis=1)
-    err = fit.conf_int().apply(lambda x: (x[1] - x[0]) / 2.0, axis=1)
-    ax = means.plot(kind="bar", yerr=err, error_kw={ "ecolor": "black"}, color=kelly_colors)
-    ax.set_title("Binomial Coefficients for Correct Grade by Program")
-    ax.set_ylabel("Binomial Coefficients (95% CI)")
-    ax.set_xlabel("Program Base")
-    ax.set_xticklabels([get_fit_name(n) for n in fit.model.exog_names])
-
-    return ax
-
-def fit_coefficients_version(fit, ax=None, figsize=None):
+def fit_coefficients_base(fit, ax=None, figsize=None, intercept=False):
     if ax is None:
         pyplot.figure(figsize=figsize)
         ax = pyplot.axes()
 
     names = [get_fit_name(n) for n in fit.model.exog_names]
+    means = fit.conf_int().apply(lambda x: np.mean(x), axis=1)
+    err = fit.conf_int().apply(lambda x: (x[1] - x[0]) / 2.0, axis=1)
+
+    if not intercept:
+        means, err = means[1:], err[1:]
+        names = names[1:]
+
+    ax = means.plot(kind="bar", yerr=err, error_kw={ "ecolor": "black"}, color=kelly_colors)
+    ax.set_title("Binomial Coefficients for Correct Grade by Program")
+    ax.set_ylabel("Binomial Coefficients (95% CI)")
+    ax.set_xlabel("Program Base")
+    ax.set_xticklabels(names)
+
+    return ax
+
+def fit_coefficients_version(fit, ax=None, figsize=None, intercept=True):
+    if ax is None:
+        pyplot.figure(figsize=figsize)
+        ax = pyplot.axes()
+
+    names = [get_fit_name(n) for n in fit.model.exog_names]
+    means = fit.conf_int().apply(lambda x: np.mean(x), axis=1)
+    err = fit.conf_int().apply(lambda x: (x[1] - x[0]) / 2.0, axis=1)
+
+    # Assuming p-values come in the same order as confidence intervals
+    for i, p_val in enumerate(fit.pvalues.values):
+        if np.isclose(p_val, 1.0):
+            err[i] = 0.0
+
+    if not intercept:
+        means, err = means[1:], err[1:]
+        names = names[1:]
+
+    # Assign colors by base
     colors = []
     last_base = None
     color_i = -1
@@ -762,11 +811,10 @@ def fit_coefficients_version(fit, ax=None, figsize=None):
             last_base = base
         colors.append(kelly_colors[color_i])
 
-    means = fit.conf_int().apply(lambda x: np.mean(x), axis=1)
-    err = fit.conf_int().apply(lambda x: (x[1] - x[0]) / 2.0, axis=1)
+    # Plot bars
     ax = means.plot(kind="bar", yerr=err, error_kw={ "ecolor": "black"}, color=colors)
-    ax.set_title("Binomial Coefficients for Correct Grade by Program/Version")
-    ax.set_ylabel("Binomial Coefficients (95% CI)")
+    ax.set_title("Coefficients by Program/Version")
+    ax.set_ylabel("Coefficients (95% CI)")
     ax.set_xlabel("Program Base/Version")
     ax.set_xticklabels(names)
 

@@ -88,7 +88,19 @@ def make_aoi_kind(column):
     return column.split("_", 1)[1]
 
 def envelope(aois, padding=0):
-    """Returns a rectangle that envelopes the given AOI rectangles."""
+    """Returns a rectangle that envelopes the given AOI rectangles.
+    
+    Parameters
+    ----------
+    aois : pandas DataFrame
+        A dataframe with a row for each AOI (x, y, width, height)
+
+    Returns
+    -------
+    bbox : list of int
+        Bounding box around all aois (x, y, width, height)
+    
+    """
     x1, y1 = sys.maxint, sys.maxint
     x2, y2 = 0, 0
 
@@ -99,6 +111,68 @@ def envelope(aois, padding=0):
     return [x1 - (padding/2), y1 - (padding/2),
             x2 - x1 + padding,
             y2 - y1 + padding]
+
+def pad(aois, padding):
+    """Pads the given AOIs.
+
+    Parameters
+    ----------
+    aois : pandas DataFrame
+        A dataframe with a row for each AOI (x, y, width, height)
+
+    padding : int or list of int
+        Uniform padding (int) or top, right, bottom, left (list of int)
+
+    Returns
+    -------
+    padded_aois : pandas DataFrame
+        A copy of the input aois with padding applied
+
+    """
+    top, right, bottom, left = (0, 0, 0, 0)
+
+    if isinstance(padding, list) or isinstance(padding, tuple):
+        assert len(padding) == 4, "Padding must be (top, right, bottom, left)"
+        top, right, bottom, left = padding
+    else:
+        top, right, bottom, left = [padding] * 4
+
+    aois = aois.copy()
+    aois.x -= left
+    aois.width += (left + right)
+    aois.y -= top
+    aois.height += (top + bottom)
+
+    return aois
+
+def add_bbox(aois, bbox, kind, name):
+    """Adds a new AOI with the given bounding box, kind, and name.
+    
+    Parameters
+    ----------
+    aois : pandas DataFrame
+        A dataframe with a row for each AOI (x, y, width, height)
+    bbox : list of int
+        Bounding box of new AOI (x, y, width, height)
+    kind : str
+        New AOI kind
+    name : str
+        New AOI name
+
+    Returns
+    -------
+    more_aois : pandas DataFrame
+        A copy of the input aois with the new AOI appended
+    
+    """
+    return aois.append({
+        "kind"   : kind,
+        "name"   : name,
+        "x"      : bbox[0],
+        "y"      : bbox[1],
+        "width"  : bbox[2],
+        "height" : bbox[3]
+    }, ignore_index=True)
 
 def only_lines(aois, lines, kind="line", fmt="line {0}"):
     """Returns line-based AOIs that match the given line numbers."""
@@ -192,7 +266,6 @@ def scanpath_from_fixations(fixations, aoi_names=None, mixed=False,
     >>> rects = aoi.make_grid(2, 2, "ABCD", width=50)
     >>> fixes = aoi.fixations_from_scanpath("AABACDD", rects)
     >>> print fixes
-
        fix_x  fix_y  start_ms  duration_ms aoi_all
     0     25     25         0          200       A
     1     25     25       220          200       A
@@ -338,7 +411,6 @@ def fixations_from_scanpath(scanpath, aoi_rectangles, duration_ms=200,
     >>> rects = aoi.make_grid(2, 2, "ABCD", width=50)
     >>> fixes = aoi.fixations_from_scanpath("AABACDD", rects)
     >>> print fixes
-
        fix_x  fix_y  start_ms  duration_ms aoi_all
     0     25     25         0          200       A
     1     25     25       220          200       A
@@ -443,6 +515,21 @@ def find_rectangles(screen_image, black_thresh=255, white_row_thresh=3,
     -------
     pandas DataFrame
         A dataframe with rectangle coordinates and sizes
+
+    Examples
+    --------
+    >>> from eyecode import aoi, data
+    >>> code_img = data.busjahn_2013.program_image("basketball")
+    >>> code_aois = aoi.find_rectangles(code_img)
+    >>> print code_aois[:3]
+           kind           name    x   y  width  height
+    0      line         line 1  335  28    212      20
+    1  sub-line  line 1 part 1  335  28     53      20
+    2  sub-line  line 1 part 2  392  28     47      20
+
+    See Also
+    --------
+    eyecode.plot.aoi.draw_rectangles: Visualize AOI rectangles
 
     """
     start_y, end_y = None, 0
@@ -554,7 +641,7 @@ def make_code_aois(code_file, font_size=(14, 25), line_offset=5,
         syntax_categories=SYNTAX_CATEGORIES):
     """Creates block, line, and syntax AOI rectangles from Python source code."""
 
-    aoi_df = pandas.DataFrame(columns=("aoi_kind", "name",
+    aoi_df = pandas.DataFrame(columns=("kind", "name",
         "x", "y", "width", "height", "note"))
 
     # Needed for syntax-based AOIs
@@ -588,7 +675,7 @@ def make_code_aois(code_file, font_size=(14, 25), line_offset=5,
             if len(line_str.strip()) > 0:
                 # Non-blank line: add AOI for whole line
                 aoi_df = aoi_df.append({
-                    "aoi_kind" : "line",
+                    "kind"     : "line",
                     "name"     : "line {0}".format(line + 1),
                     "x"        : 0,
                     "y"        : (line * font_size[1]) + (line * line_offset) - (line_offset / 2),
@@ -605,7 +692,7 @@ def make_code_aois(code_file, font_size=(14, 25), line_offset=5,
                 if not last_blank:
                     # Add AOI for whitespace separated block of lines
                     aoi_df = aoi_df.append({
-                        "aoi_kind" : "block",
+                        "kind"     : "block",
                         "name"     : "lines {0}-{1}".format(block_start + 1, line + 1),
                         "x"        : 0,
                         "y"        : (block_start * font_size[1]) + (block_start * line_offset) - (line_offset / 2),
@@ -629,7 +716,7 @@ def make_code_aois(code_file, font_size=(14, 25), line_offset=5,
             kind += ".Indentation"
 
         aoi_df = aoi_df.append({
-            "aoi_kind" : "syntax",
+            "kind"     : "syntax",
             "name"     : syntax_categories[kind],
             "x"        : col * font_size[0],
             "y"        : (line * font_size[1]) + (line * line_offset) - (line_offset / 2),
@@ -679,7 +766,7 @@ def hit_point(fix_pt, aoi_polys, **kwargs):
             return aoi
     return None
 
-def hit_circle(fix_pt, aoi_polys, radius):
+def hit_circle(fix_pt, aoi_polys, radius=1, **kwargs):
     """Returns the polygon that has the most overlap with
     the fixation circle."""
     fix_circle = fix_pt.buffer(radius)
@@ -694,8 +781,58 @@ def hit_circle(fix_pt, aoi_polys, radius):
                 best_area = area
     return best_aoi
 
-def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle, hit_radius=20):
-    """Hit tests fixations against AOI rectangles."""
+def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle,
+        hit_radius=20, **kwargs):
+    """Hit tests fixations against AOI rectangles.
+
+    Parameters
+    ----------
+    fixations : pandas DataFrame
+        A DataFrame with fixations to hit test (fix_x, fix_y)
+    aois : pandas DataFrame
+        A DataFrame with areas of interest (kind, name, x, y, width, height)
+    offsets : pandas DataFrame or None
+        A DataFrame with different fixations offsets to apply (name, x, y).
+        If None, no offset is applied
+    hit_fun : callable
+        Hit testing function. See hit_point and hit_circle for examples
+    hit_radius : int
+        Fixation circle radius for hit_circle
+
+    Returns
+    -------
+    aoi_fixations : pandas DataFrame
+        A copy of the fixations DataFrame with additional columns for each
+        offset and AOI kind
+
+    Notes
+    -----
+    Requires the shapely library: http://toblerity.org/shapely
+
+    Examples
+    --------
+    >>> from eyecode import aoi, data
+    >>> code_img = data.busjahn_2013.program_image("basketball")
+    >>> code_aois = aoi.find_rectangles(code_img)
+    >>> raw_fixes = data.busjahn_2013.raw_fixations()
+    >>> print raw_fixes[:5][["trial_id", "start_ms", "fix_x", "fix_y"]]
+       trial_id  start_ms       fix_x       fix_y
+    0         8       250  423.437500  378.083344
+    1         8       567  324.711548   67.538460
+    2         8       867  415.625000   -3.750000
+    3         8      1284  444.852936  159.117645
+    4         8      2034  366.030792  133.842896
+    >>> aoi_fixes = aoi.hit_test(raw_fixes, sub_line_aois)
+    >>> aoi_cols = aoi.get_aoi_columns(aoi_fixes)
+    >>> print aoi_fixes[:5][["trial_id", "start_ms", "fix_x", "fix_y"] + aoi_cols]
+       trial_id  start_ms       fix_x       fix_y aoi_line   aoi_sub-line
+    0         8       250  423.437500  378.083344   line 9  line 9 part 1
+    1         8       567  324.711548   67.538460      NaN            NaN
+    2         8       867  415.625000   -3.750000      NaN            NaN
+    3         8      1284  444.852936  159.117645   line 4  line 4 part 2
+    4         8      2034  366.030792  133.842896      NaN            NaN
+    
+    """
     from shapely.geometry import Point
     output_rows = []
 
@@ -730,7 +867,7 @@ def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle, hit_radius=20):
             # Test AOIs in groups (no overlap within a group is assumed)
             for kind in aoi_kinds:
                 test_polys = aoi_polys[kind]
-                hit_aoi = hit_fun(fix_pt, test_polys, radius=hit_radius)
+                hit_aoi = hit_fun(fix_pt, test_polys, radius=hit_radius, **kwargs)
                 if hit_aoi is None:
                     row.append(np.NaN)
                 else:
