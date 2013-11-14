@@ -1,0 +1,2 @@
+#!/bin/bash
+rsync -av ../docs/_build/html/* .
