@@ -1,3 +1,0 @@
-1 low
-2 low
-4 high
