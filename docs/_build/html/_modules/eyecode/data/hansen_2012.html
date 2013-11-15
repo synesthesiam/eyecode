@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>eyecode.data.hansen_2012 &mdash; eyeCode 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="../../../_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../../',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="top" title="eyeCode 0.1.0 documentation" href="../../../index.html" />
+    <link rel="up" title="Module code" href="../../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../../../index.html">eyeCode 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" accesskey="U">Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <h1>Source code for eyecode.data.hansen_2012</h1><div class="highlight"><pre>
+<span class="sd">&quot;&quot;&quot;Complete dataset from the eyeCode experiment (http://arxiv.org/abs/1304.5257)&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span><span class="o">,</span> <span class="nn">os</span><span class="o">,</span> <span class="nn">gzip</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
+
+<span class="n">DATA_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">__file__</span><span class="p">))</span>
+<span class="n">XML_DIR</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="s">&quot;xml&quot;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">__read_csv</span><span class="p">(</span><span class="n">file_name</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">pandas</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">gzip</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="s">&quot;{0}.csv.gz&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">file_name</span><span class="p">))))</span>
+
+<div class="viewcode-block" id="programs"><a class="viewcode-back" href="../../../data.html#eyecode.data.hansen_2012.programs">[docs]</a><span class="k">def</span> <span class="nf">programs</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Code metrics for all programs&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">__read_csv</span><span class="p">(</span><span class="s">&quot;programs&quot;</span><span class="p">)</span>
+</div>
+<span class="k">def</span> <span class="nf">line_categories</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Automatically assigned categories for program lines&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">__read_csv</span><span class="p">(</span><span class="s">&quot;line_categories&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="experiments"><a class="viewcode-back" href="../../../data.html#eyecode.data.hansen_2012.experiments">[docs]</a><span class="k">def</span> <span class="nf">experiments</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Experiment/participant information&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">__read_csv</span><span class="p">(</span><span class="s">&quot;experiments&quot;</span><span class="p">)</span>
+</div>
+<div class="viewcode-block" id="trials"><a class="viewcode-back" href="../../../data.html#eyecode.data.hansen_2012.trials">[docs]</a><span class="k">def</span> <span class="nf">trials</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Individual trial information&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">__read_csv</span><span class="p">(</span><span class="s">&quot;trials&quot;</span><span class="p">)</span>
+</div>
+<span class="k">def</span> <span class="nf">trial_responses</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Timestamped text responses for all trials&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">__read_csv</span><span class="p">(</span><span class="s">&quot;trial_responses&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="all_fixations"><a class="viewcode-back" href="../../../data.html#eyecode.data.hansen_2012.all_fixations">[docs]</a><span class="k">def</span> <span class="nf">all_fixations</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Hit-tested fixations for all trials&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">__read_csv</span><span class="p">(</span><span class="s">&quot;all_fixations&quot;</span><span class="p">)</span>
+</div>
+<span class="k">def</span> <span class="nf">line_fixations</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Hit-tested fixations with numeric line column for all trials&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">__read_csv</span><span class="p">(</span><span class="s">&quot;line_fixations&quot;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">raw_fixations</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;Fixations without offset correction and hit testing&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">__read_csv</span><span class="p">(</span><span class="s">&quot;raw_fixations&quot;</span><span class="p">)</span>
+
+<div class="viewcode-block" id="areas_of_interest"><a class="viewcode-back" href="../../../data.html#eyecode.data.hansen_2012.areas_of_interest">[docs]</a><span class="k">def</span> <span class="nf">areas_of_interest</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;AOI rectangles for all trials&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">__read_csv</span><span class="p">(</span><span class="s">&quot;aois&quot;</span><span class="p">)</span>
+</div>
+<span class="k">def</span> <span class="nf">youtube_videos</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;URLs for uploaded eye-tracking videos&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">__read_csv</span><span class="p">(</span><span class="s">&quot;youtube&quot;</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">trial_screen_path</span><span class="p">(</span><span class="n">trial_id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Path to screenshot image for the given eye-tracking trial&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="s">&quot;screens&quot;</span><span class="p">,</span> <span class="s">&quot;{0}.png&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">trial_id</span><span class="p">))</span>
+
+<div class="viewcode-block" id="trial_screen"><a class="viewcode-back" href="../../../data.html#eyecode.data.hansen_2012.trial_screen">[docs]</a><span class="k">def</span> <span class="nf">trial_screen</span><span class="p">(</span><span class="n">trial_id</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Screenshot image for the given eye-tracking trial&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
+    <span class="k">return</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">trial_screen_path</span><span class="p">(</span><span class="n">trial_id</span><span class="p">))</span>
+</div>
+<div class="viewcode-block" id="program_code"><a class="viewcode-back" href="../../../data.html#eyecode.data.hansen_2012.program_code">[docs]</a><span class="k">def</span> <span class="nf">program_code</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">version</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Lines of code for the given program base and version&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="s">&quot;programs&quot;</span><span class="p">,</span> <span class="s">&quot;{0}_{1}.py&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">version</span><span class="p">)),</span> <span class="s">&quot;r&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+</div>
+<div class="viewcode-block" id="program_output"><a class="viewcode-back" href="../../../data.html#eyecode.data.hansen_2012.program_output">[docs]</a><span class="k">def</span> <span class="nf">program_output</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">version</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Lines of correct text output for the given program base and version&quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="s">&quot;programs&quot;</span><span class="p">,</span> <span class="s">&quot;output&quot;</span><span class="p">,</span> <span class="s">&quot;{0}_{1}.py.txt&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">version</span><span class="p">)),</span> <span class="s">&quot;r&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+</div>
+<span class="k">def</span> <span class="nf">program_lines_with_code</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">version</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;List of non-blank lines for the given program base and version (1-based)&quot;&quot;&quot;</span>
+    <span class="n">lines</span> <span class="o">=</span> <span class="n">program_code</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">version</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span> <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span> <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">program_image</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">version</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;Image with syntax-highlighted, line-numbered code for the given program base and version&quot;&quot;&quot;</span>
+    <span class="kn">from</span> <span class="nn">PIL</span> <span class="kn">import</span> <span class="n">Image</span>
+    <span class="k">return</span> <span class="n">Image</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">DATA_DIR</span><span class="p">,</span> <span class="s">&quot;images&quot;</span><span class="p">,</span> <span class="s">&quot;programs&quot;</span><span class="p">,</span> <span class="s">&quot;{0}_{1}.py.png&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">base</span><span class="p">,</span> <span class="n">version</span><span class="p">)))</span>
+
+<span class="k">def</span> <span class="nf">xml_trial_ids</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">p</span><span class="p">)[</span><span class="mi">1</span><span class="p">][:</span><span class="o">-</span><span class="nb">len</span><span class="p">(</span><span class="s">&quot;.xml.gz&quot;</span><span class="p">)])</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">XML_DIR</span><span class="p">,</span> <span class="s">&quot;*.xml.gz&quot;</span><span class="p">))]</span>
+
+<span class="k">def</span> <span class="nf">xml_trial_path</span><span class="p">(</span><span class="n">trial_id</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">XML_DIR</span><span class="p">,</span> <span class="s">&quot;{0:02d}.xml.gz&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">trial_id</span><span class="p">))</span>
+
+<span class="k">def</span> <span class="nf">xml_trial</span><span class="p">(</span><span class="n">trial_id</span><span class="p">):</span>
+    <span class="kn">from</span> <span class="nn">lxml</span> <span class="kn">import</span> <span class="n">etree</span>
+    <span class="k">return</span> <span class="n">etree</span><span class="o">.</span><span class="n">parse</span><span class="p">(</span><span class="n">xml_trial_path</span><span class="p">(</span><span class="n">trial_id</span><span class="p">))</span>
+</pre></div>
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../../genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="../../../index.html">eyeCode 0.1.0 documentation</a> &raquo;</li>
+          <li><a href="../../index.html" >Module code</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Michael Hansen.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

@@ -109,7 +109,8 @@ def task_all_fixations():
     def make_all():
         from shapely.geometry import Point
         output_rows = []
-        hit_kinds = { "point" : eyecode.aoi.hit_point, "circle" : eyecode.aoi.hit_circle }
+        #hit_kinds = { "point" : eyecode.aoi.hit_point, "circle" : eyecode.aoi.hit_circle }
+        hit_kinds = { "circle" : eyecode.aoi.hit_circle }
         hit_radius = 20
         aoi_kinds = ["interface", "line", "syntax", "block"]
 
