@@ -1,0 +1,275 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Experiment Data &mdash; eyeCode 0.1.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/sphinxdoc.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '0.1.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="eyeCode 0.1.0 documentation" href="index.html" />
+    <link rel="next" title="Fixation Metrics" href="metrics.html" />
+    <link rel="prev" title="Areas of Interest" href="aoi.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="metrics.html" title="Fixation Metrics"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="aoi.html" title="Areas of Interest"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">eyeCode 0.1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Experiment Data</a><ul>
+<li><a class="reference internal" href="#hansen-2012">Hansen 2012</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="aoi.html"
+                        title="previous chapter">Areas of Interest</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="metrics.html"
+                        title="next chapter">Fixation Metrics</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/data.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="experiment-data">
+<h1>Experiment Data<a class="headerlink" href="#experiment-data" title="Permalink to this headline">¶</a></h1>
+<p>The complete dataset from the <a class="reference external" href="http://eyecode.synesthesiam.com">eyeCode experiment</a> is available in the <tt class="docutils literal"><span class="pre">eyecode.data</span></tt> module.</p>
+<div class="section" id="hansen-2012">
+<h2>Hansen 2012<a class="headerlink" href="#hansen-2012" title="Permalink to this headline">¶</a></h2>
+<p>Pandas dataframes with information about the experiment programs, individual
+trials, experiments/participants are available for the combined Mechanical Turk
+and eye-tracking participant sets.</p>
+<dl class="function">
+<dt id="eyecode.data.hansen_2012.programs">
+<tt class="descclassname">eyecode.data.hansen_2012.</tt><tt class="descname">programs</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/eyecode/data/hansen_2012.html#programs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#eyecode.data.hansen_2012.programs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Code metrics for all programs.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>df</strong> : pandas DataFrame</p>
+<blockquote class="last">
+<div><ul class="simple">
+<li>base: program base category</li>
+<li>version: program version</li>
+<li>code_chars: number of characters in code</li>
+<li>code_lines: number of lines in code</li>
+<li>cyclo_comp: cyclomatic complexity of program</li>
+<li>hal_effort: Halstead effort of program</li>
+<li>hal_volume: Halstead volume of program</li>
+<li>output_chars: number of characters in correct output</li>
+<li>output_lines: number of lines in correct output</li>
+<li>category: &#8216;expectation&#8217; or &#8216;notation&#8217;</li>
+<li>program_name: joined base_version</li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.data.hansen_2012.program_code">
+<tt class="descclassname">eyecode.data.hansen_2012.</tt><tt class="descname">program_code</tt><big>(</big><em>base</em>, <em>version</em><big>)</big><a class="reference internal" href="_modules/eyecode/data/hansen_2012.html#program_code"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#eyecode.data.hansen_2012.program_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lines of code for the given program base and version</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.data.hansen_2012.program_output">
+<tt class="descclassname">eyecode.data.hansen_2012.</tt><tt class="descname">program_output</tt><big>(</big><em>base</em>, <em>version</em><big>)</big><a class="reference internal" href="_modules/eyecode/data/hansen_2012.html#program_output"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#eyecode.data.hansen_2012.program_output" title="Permalink to this definition">¶</a></dt>
+<dd><p>Lines of correct text output for the given program base and version</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.data.hansen_2012.trials">
+<tt class="descclassname">eyecode.data.hansen_2012.</tt><tt class="descname">trials</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/eyecode/data/hansen_2012.html#trials"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#eyecode.data.hansen_2012.trials" title="Permalink to this definition">¶</a></dt>
+<dd><p>Individual trial information</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.data.hansen_2012.experiments">
+<tt class="descclassname">eyecode.data.hansen_2012.</tt><tt class="descname">experiments</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/eyecode/data/hansen_2012.html#experiments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#eyecode.data.hansen_2012.experiments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Experiment/participant information.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>df</strong> : pandas DataFrame</p>
+<blockquote class="last">
+<div><ul>
+<li><p class="first">exp_id: experiment/participant id</p>
+</li>
+<li><p class="first">age: age of participant in years</p>
+</li>
+<li><dl class="first docutils">
+<dt>degree: highest degree obtained by participant</dt>
+<dd><ul class="first last simple">
+<li>One of [&#8216;bachelors&#8217;, &#8216;masters&#8217;, &#8216;phd&#8217;, &#8216;none&#8217;, &#8216;other&#8217;]</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>gender: participant&#8217;s gender</dt>
+<dd><ul class="first last simple">
+<li>One of [&#8216;male&#8217;, &#8216;female&#8217;, &#8216;unreported&#8217;]</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">py_years: years of Python experience</p>
+</li>
+<li><p class="first">prog_years: years of overall programming experience</p>
+</li>
+<li><dl class="first docutils">
+<dt>cs_major: participant is/was a Computer Science major</dt>
+<dd><ul class="first last simple">
+<li>One of [&#8216;current&#8217;, &#8216;no&#8217;, &#8216;past&#8217;]</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>difficulty: post-experiment perceived program difficulty</dt>
+<dd><ul class="first last simple">
+<li>One of [&#8216;easy&#8217;, &#8216;medium&#8217;, &#8216;hard&#8217;]</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><dl class="first docutils">
+<dt>guess_correct: post-experiment guess at correct answers</dt>
+<dd><ul class="first last simple">
+<li>One of [&#8216;most&#8217;, &#8216;half&#8217;, &#8216;few&#8217;]</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">total_grade: sum of all trial grades (usually out of 100)</p>
+</li>
+<li><p class="first">duration_sec : experiment duration in seconds</p>
+</li>
+<li><dl class="first docutils">
+<dt>location: participant set</dt>
+<dd><ul class="first last simple">
+<li>One of [&#8216;bloomington&#8217;, &#8216;mturk&#8217;, &#8216;web&#8217;]</li>
+</ul>
+</dd>
+</dl>
+</li>
+<li><p class="first">xxx_num: numeric representation of column xxx</p>
+</li>
+</ul>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<p>For the eye-tracking experiments (29 out of 162 experiments), fixations, areas
+of interest, and screenshots are available. Full trial videos can be seen at
+the <a class="reference external" href="http://eyecode.synesthesiam.com/stories/eye-tracking-videos.html">eyecode website</a>.</p>
+<dl class="function">
+<dt id="eyecode.data.hansen_2012.all_fixations">
+<tt class="descclassname">eyecode.data.hansen_2012.</tt><tt class="descname">all_fixations</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/eyecode/data/hansen_2012.html#all_fixations"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#eyecode.data.hansen_2012.all_fixations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Hit-tested fixations for all trials</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.data.hansen_2012.areas_of_interest">
+<tt class="descclassname">eyecode.data.hansen_2012.</tt><tt class="descname">areas_of_interest</tt><big>(</big><big>)</big><a class="reference internal" href="_modules/eyecode/data/hansen_2012.html#areas_of_interest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#eyecode.data.hansen_2012.areas_of_interest" title="Permalink to this definition">¶</a></dt>
+<dd><p>AOI rectangles for all trials</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.data.hansen_2012.trial_screen">
+<tt class="descclassname">eyecode.data.hansen_2012.</tt><tt class="descname">trial_screen</tt><big>(</big><em>trial_id</em><big>)</big><a class="reference internal" href="_modules/eyecode/data/hansen_2012.html#trial_screen"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#eyecode.data.hansen_2012.trial_screen" title="Permalink to this definition">¶</a></dt>
+<dd><p>Screenshot image for the given eye-tracking trial</p>
+</dd></dl>
+
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="metrics.html" title="Fixation Metrics"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="aoi.html" title="Areas of Interest"
+             >previous</a> |</li>
+        <li><a href="index.html">eyeCode 0.1.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, Michael Hansen.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>
