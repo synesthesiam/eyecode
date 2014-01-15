@@ -89,3 +89,31 @@ def one_at_a_time(frame, columns, label, norm=False, **kwargs):
         scores = scores / float(scores.max())
 
     return scores
+
+def shuffle_split_binary(frame, split_col, test_col, test_fun, n_iter=100):
+    from sklearn import cross_validation
+    split_values = frame[split_col].unique()
+    assert len(split_values) == 2
+
+    frame_1 = frame[frame[split_col] == split_values[0]]
+    frame_2 = frame[frame[split_col] == split_values[1]]
+
+    assert len(frame_1) != len(frame_2)
+    smaller = frame_1 if len(frame_1) < len(frame_2) else frame_2
+    larger = frame_2 if len(frame_1) < len(frame_2) else frame_1
+    smaller_name = smaller.iloc[0][split_col]
+    larger_name = larger.iloc[0][test_col]
+
+    ss = cross_validation.ShuffleSplit(len(larger), train_size=len(smaller), n_iter=n_iter)
+    results = []
+    sm_true, sm_false = smaller[test_col].sum(), (-smaller[test_col]).sum()
+
+    for train_idx, test_idx in ss:
+        lg_true, lg_false = larger.iloc[train_idx][test_col].sum(),\
+                (-larger.iloc[train_idx][test_col]).sum()
+
+        df = pandas.DataFrame({"False": [sm_false, lg_false], "True": [sm_true, lg_true]},
+                              index=[smaller_name, larger_name])
+        results.append(test_fun(df))
+
+    return results

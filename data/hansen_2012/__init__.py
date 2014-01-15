@@ -1,7 +1,9 @@
 """Complete dataset from the eyeCode experiment (http://arxiv.org/abs/1304.5257)"""
 
-import pandas, os, gzip
+import os, gzip
 from glob import glob
+import pandas
+from PIL import Image
 
 DATA_DIR = os.path.abspath(os.path.dirname(__file__))
 XML_DIR = os.path.join(DATA_DIR, "xml")
@@ -98,7 +100,6 @@ def trial_screen_path(trial_id):
 
 def trial_screen(trial_id):
     """Screenshot image for the given eye-tracking trial"""
-    from PIL import Image
     return Image.open(trial_screen_path(trial_id))
 
 def program_code(base, version):
@@ -116,7 +117,6 @@ def program_lines_with_code(base, version):
 
 def program_image(base, version):
     """Image with syntax-highlighted, line-numbered code for the given program base and version"""
-    from PIL import Image
     return Image.open(os.path.join(DATA_DIR, "images", "programs", "{0}_{1}.py.png".format(base, version)))
 
 def xml_trial_ids():

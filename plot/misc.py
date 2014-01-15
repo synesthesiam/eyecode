@@ -45,6 +45,30 @@ def grade_pie(trials_df, ax=None, figsize=None, colors=PIE_COLORS, text_size=16)
 
     return ax
 
+def grade_pie_versions(responses, axes=None, figsize=None,
+        colors=PIE_COLORS, **kwargs):
+    base = responses.iloc[0]["base"]
+    versions = sorted(responses.version.unique())
+    num_cols = len(versions) + 1
+
+    if axes is None:
+        if figsize is None:
+            figsize = (num_cols * 6, 5)
+        fig, axes = pyplot.subplots(nrows=1, ncols=num_cols, figsize=figsize)
+
+    assert len(axes) >= num_cols, "Not enough axes"
+
+    ax = axes[0]
+    grade_pie(responses, ax=ax, colors=colors, **kwargs)
+    ax.set_title("{0} (all)".format(base))
+
+    for v, ax, color in zip(versions, axes[1:], it.cycle(colors)):
+        grade_pie(responses[responses.version == v], ax=ax,
+                colors=colors, **kwargs)
+        ax.set_title("{0} ({1})".format(base, v))
+
+    return axes
+
 def feature_importances(importances, ax=None, figsize=None):
     if ax is None:
         pyplot.figure(figsize=figsize)
@@ -81,7 +105,7 @@ def cross_validation(frame, ax=None, figsize=None):
     return ax
 
 def column_distributions(responses, column, xlabel=None, title_prefix=None,
-        axes=None, figsize=None, colors=kelly_colors, xlim=None):
+        axes=None, figsize=None, colors=kelly_colors, xlim=None, counts=False):
     versions = sorted(responses.version.unique())
     num_cols = len(versions) + 1
 
@@ -96,14 +120,22 @@ def column_distributions(responses, column, xlabel=None, title_prefix=None,
         title_prefix = column
 
     ax = axes[0]
-    responses[column].hist(ax=ax)
+    if counts:
+        responses[column].value_counts().sort_index()\
+                .plot(kind="bar", ax=ax)
+    else:
+        responses[column].hist(ax=ax)
     ax.set_title("{0} (all)".format(title_prefix))
 
     if xlabel is not None:
         ax.set_xlabel(xlabel)
 
     for v, ax, color in zip(versions, axes[1:], it.cycle(colors)):
-        responses[responses.version == v][column].hist(ax=ax, color=color)
+        if counts:
+            responses[responses.version == v][column].value_counts()\
+                    .sort_index().plot(kind="bar", ax=ax, color=color)
+        else:
+            responses[responses.version == v][column].hist(ax=ax, color=color)
         ax.set_title("{0} ({1})".format(title_prefix, v))
 
         if xlabel:
@@ -112,6 +144,11 @@ def column_distributions(responses, column, xlabel=None, title_prefix=None,
     if xlim is not None:
         for ax in axes:
             ax.set_xlim(xlim)
+
+    if counts:
+        # Undo x tick label rotation
+        for ax in axes:
+            pyplot.setp(ax.xaxis.get_majorticklabels(), rotation=0)
     
     return axes
 
@@ -139,15 +176,23 @@ def programming_experience_distributions(responses, **kwargs):
             title_prefix="Programming Experience",
             xlabel="Years of Programming Experience", **kwargs)
 
-def keycoeff_distributions(responses, **kwargs):
+def keycoeff_distributions(responses, log=False, **kwargs):
+    if log:
+        responses = responses.copy()
+        responses["keystroke_coefficient"] = np.log(responses["keystroke_coefficient"])
     return column_distributions(responses, "keystroke_coefficient",
             title_prefix="Trial Key Coeff.",
-            xlabel="Keystroke Coefficient", **kwargs)
+            xlabel="Keystroke Coefficient{0}".format(" (log)" if log else ""), **kwargs)
 
 def respprop_distributions(responses, **kwargs):
     return column_distributions(responses, "response_proportion",
             title_prefix="Trial Resp. Prop.",
             xlabel="Response Proportion", **kwargs)
+
+def respcorr_distributions(responses, **kwargs):
+    return column_distributions(responses, "response_corrections",
+            title_prefix="Trial Resp. Corr.",
+            xlabel="Response Corrections", counts=True, **kwargs)
 
 
 def total_grades_distribution(trials, ax=None, figsize=None, **kwargs):
@@ -403,6 +448,7 @@ def response_proportion_by_base(trials, axes=None, figsize=None, colors=kelly_co
 def response_corrections_by_base(trials, axes=None, figsize=None, colors=kelly_colors):
     tight = False
     bases = sorted(trials.base.unique())
+    max_corr = max(trials.response_corrections.value_counts().index)
 
     if axes is None:
         fig, _ = pyplot.subplots(nrows=2, ncols=5, figsize=figsize)
@@ -410,16 +456,23 @@ def response_corrections_by_base(trials, axes=None, figsize=None, colors=kelly_c
         axes = fig.axes
         tight = True
 
-    bins = np.arange(0, trials.response_corrections.max() + 1)
-    bin_range = (0, bins[-1])
-
     for ax, base, color in zip(axes, bases, it.cycle(colors)):
         b_trials = trials[trials.base == base]
-        rs_corr = b_trials.response_corrections
+        rs_corr = b_trials.response_corrections.value_counts()
 
-        rs_corr.hist(ax=ax, color=color, bins=bins, range=bin_range)
+        # Add 0 counts
+        for i in range(max_corr + 1):
+            to_add = {}
+            if i not in rs_corr.index:
+                to_add[i] = 0
+            if len(to_add) > 0:
+                rs_corr = rs_corr.append(pandas.Series(to_add))
+
+        rs_corr = rs_corr.sort_index()
+        rs_corr.plot(kind="bar", ax=ax, color=color)
         ax.set_title("{0}, {1} trials".format(base, len(b_trials)))
         ax.set_xlabel("Response Corrections")
+        pyplot.setp(ax.xaxis.get_majorticklabels(), rotation=0)
 
     if tight:
         fig = axes[0].figure
@@ -817,5 +870,28 @@ def fit_coefficients_version(fit, ax=None, figsize=None, intercept=True):
     ax.set_ylabel("Coefficients (95% CI)")
     ax.set_xlabel("Program Base/Version")
     ax.set_xticklabels(names)
+
+    return ax
+
+def version_balance(trials, ax=None, figsize=None):
+    if ax is None:
+        pyplot.figure(figsize=figsize)
+        ax = pyplot.axes()
+
+    counts = trials.program_name.value_counts().sort_index()
+
+    # Assign colors by base
+    colors = []
+    last_base = None
+    color_i = -1
+    for n in counts.index:
+        base = n.split("_")[0]
+        if base != last_base:
+            color_i += 1
+            last_base = base
+        colors.append(kelly_colors[color_i])
+
+    counts.plot(kind="bar", ax=ax, color=colors)
+    ax.set_title("Version Balance ({0} trials)".format(len(trials)))
 
     return ax

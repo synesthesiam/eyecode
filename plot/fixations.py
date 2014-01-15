@@ -1,9 +1,12 @@
-import numpy as np, itertools as it
-from kelly_colors import kelly_colors
+import itertools as it
+from StringIO import StringIO
+
+import numpy as np
 from matplotlib import pyplot, cm, colors
 from matplotlib.ticker import MultipleLocator, FuncFormatter
 from PIL import Image, ImageDraw, ImageEnhance
-from StringIO import StringIO
+
+from kelly_colors import kelly_colors
 from ..util import contrast_color, transition_matrix, make_heatmap
 
 # Raw fixations and heatmaps {{{

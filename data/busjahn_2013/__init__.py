@@ -1,4 +1,5 @@
-import pandas, os
+import os
+import pandas
 from PIL import Image
 
 DATA_DIR = os.path.abspath(os.path.dirname(__file__))

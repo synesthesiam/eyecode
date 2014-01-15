@@ -1,4 +1,7 @@
-import pandas, os, numpy as np, sys
+import os, sys
+import numpy as np
+import pandas
+
 from ..util import just2, window
 from lxml import builder as lb
 
@@ -23,7 +26,7 @@ SYNTAX_CATEGORIES = {
 
 # Utility Methods {{{
 
-def make_aoi_column(kind):
+def kind_to_col(kind):
     """Converts an AOI kind to a column name.
 
     Parameters
@@ -38,8 +41,8 @@ def make_aoi_column(kind):
     """
     return "aoi_{0}".format(kind)
 
-def make_aoi_columns(kinds):
-    """Converts a list of AOI kinds to a column mixed_names.
+def kinds_to_cols(kinds):
+    """Converts a list of AOI kinds to column names.
 
     Parameters
     ----------
@@ -84,7 +87,7 @@ def get_aoi_kinds(fixations):
     """
     return [c.split("_", 1)[1] for c in get_aoi_columns(fixations)]
 
-def make_aoi_kind(column):
+def col_to_kind(column):
     return column.split("_", 1)[1]
 
 def envelope(aois, padding=0):
@@ -301,7 +304,7 @@ def scanpath_from_fixations(fixations, aoi_names=None, mixed=False,
 
     """
     kinds = get_aoi_kinds(fixations) if aoi_names is None else aoi_names.keys()
-    columns = make_aoi_columns(kinds)
+    columns = kinds_to_cols(kinds)
 
     # Re-index by start time so scanpaths will retain it
     fixations = fixations.set_index("start_ms", drop=False)
@@ -316,7 +319,7 @@ def scanpath_from_fixations(fixations, aoi_names=None, mixed=False,
     for kind, names in aoi_names.iteritems():
         if names is None or len(names) == 0:
             # Fill in missing aoi names
-            col = make_aoi_column(kind)
+            col = kind_to_col(kind)
             aoi_names[kind] = sorted(aoi_fixes[kind].unique())
         else:
             # Filter out unwanted names
@@ -445,7 +448,7 @@ def fixations_from_scanpath(scanpath, aoi_rectangles, duration_ms=200,
         aoi_kinds = { n : kind for n in aoi_names }
 
     sorted_kinds = sorted(set(aoi_kinds.values()))
-    aoi_cols = make_aoi_columns(sorted_kinds)
+    aoi_cols = kinds_to_cols(sorted_kinds)
     rows = []
     time = 0
 
@@ -878,7 +881,7 @@ def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle,
     cols = list(fixations.columns) + ["offset_kind"]
 
     # Add AOI hit columns
-    cols += make_aoi_columns(aoi_kinds)
+    cols += kinds_to_cols(aoi_kinds)
 
     return pandas.DataFrame(output_rows, columns=cols)
 
@@ -887,7 +890,7 @@ def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle,
 # Automated Coding {{{
 
 def combine_aoi_blocks(fixations, aoi_kind):
-    aoi_col = make_aoi_column(aoi_kind)
+    aoi_col = kind_to_col(aoi_kind)
 
     # Create fixation blocks. Multiple instances of an AOI name are
     # collapsed into a single block.

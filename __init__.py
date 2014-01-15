@@ -1,1 +1,1 @@
-import plot, io, metrics, data, util, aoi
+import data, metrics, plot, util, aoi

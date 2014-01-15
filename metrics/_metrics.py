@@ -1,72 +1,132 @@
-import pandas, numpy as np
-from ..aoi import get_aoi_columns, get_aoi_kinds, make_aoi_column, make_aoi_columns
+import numpy as np
+import pandas
+from ..aoi import get_aoi_columns, get_aoi_kinds, kind_to_col, kinds_to_cols
 
-def fixations_per_trial(fixations):
-    """Number of fixations"""
-    return fixations.groupby(["exp_id", "trial_id"]).size()
+# Fixation Metrics {{{
 
-def fixation_ms_per_trial(fixations):
-    return fixations.groupby("trial_id")["duration_ms"].mean()
+def fixes_per_trial(fixes_df):
+    """Number of fixations by trial.
+    
+    Parameters
+    ----------
+    fixes_df : pandas DataFrame
+        Fixations dataframe with exp_id and trial_id columns
 
-def fixations_per_aoi(aoi_fixations, text_lengths=None):
-    aoi_cols = get_aoi_columns(aoi_fixations)
-    aoi_kinds = get_aoi_kinds(aoi_fixations)
+    Returns
+    -------
+    df : pandas DataFrame
+        DataFrame with number of fixations per experiment/trial
 
+    """
+    return fixes_df.groupby(["exp_id", "trial_id"]).size()
+
+def fix_ms_per_trial(fixes_df):
+    """Mean fixation duration by trial.
+
+    Parameters
+    ----------
+    fixes_df : pandas DataFrame
+        Fixations dataframe with exp_id, trial_id, and duration_ms columns
+
+    Returns
+    -------
+    df : pandas DataFrame
+        DataFrame with mean fixation duration (ms) per experiment/trial
+
+    """
+    return fixes_df.groupby(["exp_id", "trial_id"])["duration_ms"].mean()
+
+def fixes_per_aoi(aoi_fixes_df):
+    """Number of fixations by AOI.
+
+    Parameters
+    ----------
+    aoi_fixes_df : pandas DataFrame
+        Fixations dataframe with AOI columns (hit names as values)
+
+    Returns
+    -------
+    df : pandas DataFrame
+        DataFrame with mean fixation duration (ms) per AOI kind/name
+
+    """
+    aoi_cols = get_aoi_columns(aoi_fixes_df)
+    aoi_kinds = get_aoi_kinds(aoi_fixes_df)
+
+    # Create new frame with a row for each AOI kind and hit name
     rows = []
-    for _, fix in aoi_fixations.iterrows():
+    for _, fix in aoi_fixes_df.iterrows():
         for col, kind in zip(aoi_cols, aoi_kinds):
             rows.append([kind, fix[col]])
 
     num_fixes = pandas.DataFrame(rows, columns=["kind", "name"]).\
         groupby(["kind", "name"]).size()
 
-    if text_lengths is None:
-        return num_fixes
-    else:
-        # Indexes will be aoi names
-        len_series = pandas.Series(text_lengths)
+    return num_fixes
 
-        # Missing aois will have NaN
-        norm_fixes = num_fixes / len_series
-        return norm_fixes.dropna()
+def fixes_ms_per_aoi(aoi_fixes_df):
+    """Total fixation duration per AOI.
 
-def fixation_ms_per_aoi(aoi_fixations, text_lengths=None):
-    aoi_cols = get_aoi_columns(aoi_fixations)
-    aoi_kinds = get_aoi_kinds(aoi_fixations)
+    Parameters
+    ----------
+    aoi_fixes_df : pandas DataFrame
+        Fixations dataframe with AOI columns/names and duration_ms
 
+    Returns
+    -------
+    df : pandas DataFrame
+        DataFrame with total fixation duration (ms) per AOI kind/name
+
+    """
+    aoi_cols = get_aoi_columns(aoi_fixes_df)
+    aoi_kinds = get_aoi_kinds(aoi_fixes_df)
+
+    # Create new frame with a row for each AOI/name with duration
     rows = []
-    for _, fix in aoi_fixations.iterrows():
+    for _, fix in aoi_fixes_df.iterrows():
         for col, kind in zip(aoi_cols, aoi_kinds):
             time = 0 if pandas.isnull(fix[col]) else fix["duration_ms"]
             rows.append([kind, fix[col], time])
 
-    time_fixes = pandas.DataFrame(rows, columns=["kind", "name", "duration_ms"]).\
+    tf_cols = ["kind", "name", "duration_ms"]
+    time_fixes = pandas.DataFrame(rows, columns=tf_cols).\
         groupby(["kind", "name"])["duration_ms"].sum()
 
-    if text_lengths is None:
-        return time_fixes
-    else:
-        # Indexes will be aoi names
-        len_series = pandas.Series(text_lengths)
+    return time_fixes
 
-        # Missing aois will have NaN
-        norm_fixes = time_fixes / len_series
-        return norm_fixes.dropna()
+def first_fix_ms_aoi(aoi_fixes_df):
+    """Time of first fixation on each AOI.
 
-def first_fixation_ms(aoi_fixations):
-    aoi_cols = get_aoi_columns(aoi_fixations)
-    aoi_kinds = get_aoi_kinds(aoi_fixations)
+    Parameters
+    ----------
+    aoi_fixes_df : pandas DataFrame
+        Fixations dataframe with AOI columns/names and start_ms
 
+    Returns
+    -------
+    df : pandas DataFrame
+        DataFrame with first fixation time (ms) per AOI kind/name
+
+    """
+    aoi_cols = get_aoi_columns(aoi_fixes_df)
+    aoi_kinds = get_aoi_kinds(aoi_fixes_df)
+
+    # Create a new frame with AOI kinds/names and first fixation time
     rows = []
     for col, kind in zip(aoi_cols, aoi_kinds):
-        min_times = aoi_fixations[[col, "start_ms"]].groupby(col).start_ms.min()
+        min_times = aoi_fixes_df[[col, "start_ms"]]\
+                .groupby(col).start_ms.min()
+
         for name, time in min_times.iterkv():
             rows.append([kind, name, time])
 
     if len(rows) == 0:
         rows = None
 
-    first_df = pandas.DataFrame(rows, columns=["kind", "name", "start_ms"])
+    fst_cols = ["kind", "name", "start_ms"]
+    first_df = pandas.DataFrame(rows, columns=fst_cols)
+
+    # Re-index by AOI kind/name
     first_df.set_index(["kind", "name"], inplace=True)
 
     return first_df.start_ms
@@ -155,7 +215,7 @@ def lines_by_time(fixations, num_steps=None, step_size=None):
 
 def time_to_all_aois(fixations, aoi_names=None):
     kinds = get_aoi_kinds(fixations) if aoi_names is None else aoi_names.keys()
-    columns = make_aoi_columns(kinds)
+    columns = kinds_to_cols(kinds)
     aoi_fixes = { k: fixations[[c, "start_ms"]].dropna() for (c, k) in zip(columns, kinds) }
 
     if aoi_names is None:
@@ -163,7 +223,7 @@ def time_to_all_aois(fixations, aoi_names=None):
 
     # Create dictionary of aoi names
     for kind, names in aoi_names.iteritems():
-        col = make_aoi_column(kind)
+        col = kind_to_col(kind)
         if names is None or len(names) == 0:
             # Fill in missing aoi names
             aoi_names[kind] = aoi_fixes[kind][col].unique()
@@ -174,7 +234,7 @@ def time_to_all_aois(fixations, aoi_names=None):
 
     rows = []
     for kind, fixes in aoi_fixes.iteritems():
-        col = make_aoi_column(kind)
+        col = kind_to_col(kind)
         names_left = set(aoi_names[kind])
         time_to_all = np.NaN
         for _, f in fixes.sort("start_ms").iterrows():
@@ -193,3 +253,6 @@ def fixation_ms_proportion(aoi_fixations):
     ms_per_aoi = fixation_ms_per_aoi(aoi_fixations)
     total_ms = ms_per_aoi.groupby(level="kind").sum().astype(float)
     return ms_per_aoi.div(total_ms, level="kind")
+
+# }}}
+
