@@ -1,3 +1,2 @@
-from retina import *
-from eye import *
-from python_dummy import *
+from _sensor import DiscreteRetina, SimpleEye
+from _dummy import DummyModel
