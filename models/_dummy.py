@@ -5,7 +5,16 @@ from ..util import file_to_text_buffer, stdoutIO
 
 class DummyModel:
     ENCODING_TIME  = 100
+    PROCESS_TIME   = 250
     KEYSTROKE_TIME = 12
+
+    STATE_END                = "end"
+    STATE_READING_LINES      = "reading-lines"
+    STATE_READING_LINE_PART  = "reading-line-part"
+    STATE_EXECUTING_LINE     = "executing-line"
+    STATE_READING_BLOCK      = "reading-block"
+    STATE_READING_BLOCK_PART = "reading-block-part"
+    STATE_EXECUTING_BLOCK    = "executing-block"
 
     def __init__(self, code_file, pad_left=4, eye=None):
         self.pad_left = pad_left
@@ -17,6 +26,7 @@ class DummyModel:
         self.long_memory = ({}, {})
         self.fixations = []
         self.responses = []
+        self.typed_output = ""
 
     def run(self):
         """Runs the model with the current eye and text buffer.
@@ -34,8 +44,8 @@ class DummyModel:
         self.long_memory = ({}, {})
         self.fixations = []
         self.responses = []
+        self.typed_output = ""
 
-        full_response = ""
         eye = self.eye
         last_line = self.text_buffer.shape[0] - 1
 
@@ -44,67 +54,67 @@ class DummyModel:
         fovea_len = fovea_stop - fovea_start
 
         # Loop until last line is read
-        while True:
-            # Look at current line
-            code_str = eye.view()
+        state = DummyModel.STATE_READING_LINE_PART
+        while state != DummyModel.STATE_END:
+            if state == DummyModel.STATE_READING_LINES:
+                line_idx = eye.pos[1]
 
-            # Fixation starts now
-            fix_start = self.time
+                # Check if we're beyond the last line
+                if line_idx < last_line:
+                    state = DummyModel.STATE_READING_LINE_PART
+                else:
+                    # End of program
+                    state = DummyModel.STATE_END
 
-            # Time taken to encode current sensor contents (fixed)
-            self.time += DummyModel.ENCODING_TIME
+            elif state == DummyModel.STATE_READING_LINE_PART:
+                # Look at current position
+                code_str = eye.view()
 
-            # Add fovea contents to STM
-            self.short_memory.append(code_str[fovea_idx])
+                # Fixation starts now
+                fix_start = self.time
 
-            # Record fixation
-            self.fixations.append([eye.pos[0], eye.pos[1],
-                fix_start, self.time - fix_start])
+                # Time taken to encode current sensor contents (fixed)
+                self.time += DummyModel.ENCODING_TIME
 
-            # Decide on next fixation. Default is immediately to the right.
-            next_pos = (self.eye.pos[0] + fovea_len, self.eye.pos[1])
+                # Add fovea contents to STM
+                self.short_memory.append(code_str[fovea_idx])
 
-            # Look for whitespace to the right of the fovea
-            if len(code_str[(fovea_stop + 1):].strip()) == 0:
+                # Record fixation
+                self.fixations.append([eye.pos[0], eye.pos[1],
+                    fix_start, self.time - fix_start])
 
-                # Execute line in STM (if not blank)
-                full_line = "".join(self.short_memory)
-                if len(full_line.strip()) > 0:
-                    
-                    # Use locals/globals from LTM
-                    mem_globals, mem_locals = self.long_memory
-                    response = ""
+                # Check right of fovea for whitespace
+                right_of_fovea = code_str[(fovea_stop + 1):].strip()
 
-                    # Execute current line and record response
-                    with stdoutIO() as out:
-                        exec(full_line, mem_globals, mem_locals)
-                        response = out.getvalue().strip()
+                if len(right_of_fovea) > 0:
+                    # More to read on this line. Move eye to the right.
+                    next_pos = (eye.pos[0] + fovea_len, eye.pos[1])
+                    self.time += eye.move_to(next_pos)
+                else:
+                    # Execute line in STM
+                    state = DummyModel.STATE_EXECUTING_LINE
 
-                    if len(response) > 0:
-                        # Response time is proportional to number of keystrokes
-                        for c in response + '\n':
-                            full_response += c
-                            self.time += DummyModel.KEYSTROKE_TIME
-                            self.responses.append([self.time, full_response])
-
-                # Move eye to next line, all the way to the left
-                next_pos = (0, self.eye.pos[1] + 1)
-
-                # Clear STM
-                self.short_memory = []
-            else:
-                # Something is to the right. Continue reading line.
+            elif state == DummyModel.STATE_READING_BLOCK:
                 pass
 
-            # Stop reading to we've read the last line
-            if next_pos[1] > last_line:
-                break
+            elif state == DummyModel.STATE_READING_BLOCK_PART:
+                pass
 
-            # Physically move eye to next position
-            self.time += eye.move_to(next_pos)
+            elif state == DummyModel.STATE_EXECUTING_LINE:
+                self.__execute_line()
 
+                # Move eye to next line, all the way to the left
+                next_pos = (0, eye.pos[1] + 1)
+                self.time += eye.move_to(next_pos)
 
+                state = DummyModel.STATE_READING_LINES
+
+            elif state == DummyModel.STATE_EXECUTING_BLOCK:
+                pass
+
+        # --------------------------------------------------------------------
         # Model is done running. Package fixations and responses as DataFrames.
+
         fix_cols = ["fix_x", "fix_y", "start_ms", "duration_ms"]
         fixes_df = pandas.DataFrame(self.fixations, columns=fix_cols)
         fixes_df["end_ms"] = fixes_df["start_ms"] + fixes_df["duration_ms"]
@@ -113,3 +123,30 @@ class DummyModel:
         resps_df = pandas.DataFrame(self.responses, columns=resp_cols)
 
         return fixes_df, resps_df
+
+    def __execute_line(self):
+        """Executes the current line or block in STM and types in the resulting
+        output."""
+        # Execute line in STM (if not blank)
+        full_line = "".join(self.short_memory)
+        if len(full_line.strip()) > 0:
+            
+            # Use locals/globals from LTM
+            mem_globals, mem_locals = self.long_memory
+            response = ""
+
+            # Execute current line and record response
+            with stdoutIO() as out:
+                exec(full_line, mem_globals, mem_locals)
+                response = out.getvalue().strip()
+
+            if len(response) > 0:
+                # Response time is proportional to number of keystrokes
+                for c in response + '\n':
+                    self.typed_output += c
+                    self.time += DummyModel.KEYSTROKE_TIME
+                    self.responses.append([self.time, self.typed_output])
+
+        # Clear STM
+        self.short_memory = []
+

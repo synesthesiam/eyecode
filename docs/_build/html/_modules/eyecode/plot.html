@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>eyecode.aoi &mdash; eyeCode 0.1.0 documentation</title>
+    <title>eyecode.plot &mdash; eyeCode 0.1.0 documentation</title>
     
     <link rel="stylesheet" href="../../_static/sphinxdoc.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -60,15 +60,10 @@
         <div class="bodywrapper">
           <div class="body">
             
-  <h1>Source code for eyecode.aoi</h1><div class="highlight"><pre>
-<span class="c"># Utility methods</span>
-<span class="kn">from</span> <span class="nn">_aoi</span> <span class="kn">import</span> <span class="n">col_to_kind</span><span class="p">,</span> <span class="n">kind_to_col</span><span class="p">,</span> <span class="n">kinds_to_cols</span><span class="p">,</span> <span class="n">envelope</span><span class="p">,</span> <span class="n">get_aoi_kinds</span><span class="p">,</span> <span class="n">pad</span><span class="p">,</span> <span class="n">add_bbox</span><span class="p">,</span> <span class="n">get_aoi_columns</span>
-
-<span class="c"># Scanpath methods</span>
-<span class="kn">from</span> <span class="nn">_aoi</span> <span class="kn">import</span> <span class="n">scanpath_from_fixations</span><span class="p">,</span> <span class="n">fixations_from_scanpath</span><span class="p">,</span> <span class="n">transition_matrix</span>
-
-<span class="c"># AOI creation and hit testing</span>
-<span class="kn">from</span> <span class="nn">_aoi</span> <span class="kn">import</span> <span class="n">find_rectangles</span><span class="p">,</span> <span class="n">hit_test</span>
+  <h1>Source code for eyecode.plot</h1><div class="highlight"><pre>
+<span class="c">#import fixations, kelly_colors, pretty_plot, misc, aoi</span>
+<span class="kn">from</span> <span class="nn">kelly_colors</span> <span class="kn">import</span> <span class="n">kelly_colors</span>
+<span class="kn">from</span> <span class="nn">_plot</span> <span class="kn">import</span> <span class="n">draw_rectangles</span><span class="p">,</span> <span class="n">fix_circles</span><span class="p">,</span> <span class="n">highlight_code</span><span class="p">,</span> <span class="n">line_code_image</span><span class="p">,</span> <span class="n">fix_timeline</span><span class="p">,</span> <span class="n">aoi_transitions</span><span class="p">,</span> <span class="n">aoi_barplot</span>
 </pre></div>
 
           </div>

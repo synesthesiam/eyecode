@@ -40,6 +40,17 @@ be NaN (pandas default null value).
 
 .. autofunction:: eyecode.aoi.hit_test
 
+
+Scanpaths
+---------
+
+.. autofunction:: eyecode.aoi.scanpath_from_fixations
+
+.. autofunction:: eyecode.aoi.fixations_from_scanpath
+
+.. autofunction:: eyecode.aoi.transition_matrix
+
+
 Utility Methods
 ---------------
 

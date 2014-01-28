@@ -1,3 +1,4 @@
 *.pyc
 .doit.db
 gh-pages
+.ipynb_checkpoints

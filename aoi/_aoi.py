@@ -237,19 +237,23 @@ def scanpath_from_fixations(fixations, aoi_names=None, mixed=False,
     ----------
     fixations : pandas DataFrame
         A dataframe with one row per fixation
-    aoi_names : dict or None, optional
-        Optional dictionary mapping AOI kinds to lists of AOI names.  If None,
-        all AOI kinds and names in fixations will be included in the scanpath.
-        If specified, only the given kinds (keys) and names (values) will be
-        included. An empty list or None for a value will include all names for
-        the AOI kind.
+
+    aoi_names : str, list, dict or None, optional
+        May be a string (AOI kind), a list (AOI kinds), or a dictionary mapping
+        AOI kinds to lists of AOI names.  If None, all AOI kinds and names in
+        fixations will be included in the scanpath.  If specified, only the
+        given kinds (keys) and names (values) will be included. An empty list
+        or None for a value will include all names for the AOI kind.
+
     mixed : bool, optional
         If True, a single scanpath with mixed AOI kinds will be generated.
         If False, separate scanpaths for each AOI kind are generated.
         Default is False (multiple scanpaths).
+
     repeats : bool
         If True, repeated AOI names in scanpaths will be removed (default:
         True).
+
     name_map : dict or None, optional
         Optional dictionary mapping AOI (kind, name) tuples to unique names
         (across all AOI kinds). This is required only if mixed is True and
@@ -303,7 +307,17 @@ def scanpath_from_fixations(fixations, aoi_names=None, mixed=False,
     Name: aoi_all, dtype: object
 
     """
-    kinds = get_aoi_kinds(fixations) if aoi_names is None else aoi_names.keys()
+    if aoi_names is None:
+        kinds = get_aoi_kinds(fixations) 
+    if isinstance(aoi_names, str):
+        kinds = [aoi_names]
+        aoi_names = { aoi_names: [] }
+    elif isinstance(aoi_names, list) or isinstance(aoi_name, tuple):
+        kinds = aoi_kinds
+        aoi_names = { n : [] for n in aoi_names }
+    else:
+        kinds = aoi_names.keys()
+
     columns = kinds_to_cols(kinds)
 
     # Re-index by start time so scanpaths will retain it
@@ -474,13 +488,41 @@ def fixations_from_scanpath(scanpath, aoi_rectangles, duration_ms=200,
     return fixations
 
 def transition_matrix(scanpath, shape=None, norm=True):
+    """Returns a matrix of transition probabilities based on a scanpath.
+
+    Parameters
+    ----------
+    scanpath : pandas Series
+        Series of fixated AOI names, sorted by fixation time. See the
+        scanpath_from_fixations method for computing a scanpath.
+
+    shape : tuple or None, optional
+        Shape of the transition matrix (rows, columns). If None, the shape is
+        automatically determined by the number of unique scanpath values.
+
+    norm : bool, optional
+        If True, the matrix values will be normalized (default: True)
+
+    Returns
+    -------
+    array : array_like
+        A numpy array with transition probabilities between AOIs. Rows and
+        columns correspond to AOIs in sorted(scanpath.unique()) order.
+
+    See also
+    --------
+    scanpath_from_fixations
+
+    plot.aoi_transitions
+
+    """
+    aoi_idx = { n : i for i, n in enumerate(sorted(scanpath.unique())) }
     if shape is None:
-        max_aoi = scanpath.max()
-        shape = (max_aoi + 1, max_aoi + 1)
+        shape = (len(aoi_idx) + 1, len(aoi_idx) + 1)
 
     trans_counts = np.zeros(shape)
     for i, j in zip(scanpath, scanpath[1:]):
-        trans_counts[i, j] += 1
+        trans_counts[aoi_idx[i], aoi_idx[j]] += 1
 
     if norm:
         # Normalize by rows

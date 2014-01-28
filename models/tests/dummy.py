@@ -33,10 +33,11 @@ f = "3"
 print e + f"""
     _print_results(code)
 
-def test_if():
-    code = """x = 5
-if x > 3:
-    print "red"
-else:
-    print "blue" """
+
+def test_long_line():
+    code = """x = "a really, really long line with a lot of stuff on it for the model to read"
+print 5
+
+c = "a shorter line"
+print 10"""
     _print_results(code)

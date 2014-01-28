@@ -20,7 +20,7 @@ def fixes_per_trial(fixes_df):
     """
     return fixes_df.groupby(["exp_id", "trial_id"]).size()
 
-def fix_ms_per_trial(fixes_df):
+def fixes_ms_per_trial(fixes_df):
     """Mean fixation duration by trial.
 
     Parameters
@@ -255,4 +255,3 @@ def fixation_ms_proportion(aoi_fixations):
     return ms_per_aoi.div(total_ms, level="kind")
 
 # }}}
-

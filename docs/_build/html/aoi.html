@@ -24,7 +24,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="eyeCode 0.1.0 documentation" href="index.html" />
-    <link rel="next" title="Plotting" href="plot.html" />
+    <link rel="next" title="Experiment Data" href="data.html" />
     <link rel="prev" title="Welcome to eyeCode’s documentation!" href="index.html" /> 
   </head>
   <body>
@@ -35,7 +35,7 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="plot.html" title="Plotting"
+          <a href="data.html" title="Experiment Data"
              accesskey="N">next</a> |</li>
         <li class="right" >
           <a href="index.html" title="Welcome to eyeCode’s documentation!"
@@ -50,6 +50,7 @@
 <li><a class="reference internal" href="#">Areas of Interest</a><ul>
 <li><a class="reference internal" href="#creating-aois">Creating AOIs</a></li>
 <li><a class="reference internal" href="#hit-testing">Hit Testing</a></li>
+<li><a class="reference internal" href="#scanpaths">Scanpaths</a></li>
 <li><a class="reference internal" href="#utility-methods">Utility Methods</a></li>
 </ul>
 </li>
@@ -59,8 +60,8 @@
   <p class="topless"><a href="index.html"
                         title="previous chapter">Welcome to eyeCode&#8217;s documentation!</a></p>
   <h4>Next topic</h4>
-  <p class="topless"><a href="plot.html"
-                        title="next chapter">Plotting</a></p>
+  <p class="topless"><a href="data.html"
+                        title="next chapter">Experiment Data</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/aoi.txt"
@@ -115,7 +116,7 @@ function.</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>screen_image</strong> : PIL.Image</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>screen_image</strong> : PIL.Image</p>
 <blockquote>
 <div><p>Image with code (will be converted to &#8216;L&#8217; mode)</p>
 </div></blockquote>
@@ -137,7 +138,7 @@ function.</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>pandas DataFrame</strong> :</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>pandas DataFrame</strong> :</p>
 <blockquote class="last">
 <div><p>A dataframe with rectangle coordinates and sizes</p>
 </div></blockquote>
@@ -148,7 +149,7 @@ function.</p>
 <div class="admonition seealso">
 <p class="first admonition-title">See also</p>
 <dl class="last docutils">
-<dt><a class="reference internal" href="plot.html#eyecode.plot.aoi.draw_rectangles" title="eyecode.plot.aoi.draw_rectangles"><tt class="xref py py-obj docutils literal"><span class="pre">eyecode.plot.aoi.draw_rectangles</span></tt></a></dt>
+<dt><tt class="xref py py-obj docutils literal"><span class="pre">eyecode.plot.aoi.draw_rectangles</span></tt></dt>
 <dd>Visualize AOI rectangles</dd>
 </dl>
 </div>
@@ -179,13 +180,13 @@ hit line 1, &#8220;line 2&#8221; for line 2, and so on. If no line was hit, the 
 be NaN (pandas default null value).</p>
 <dl class="function">
 <dt id="eyecode.aoi.hit_test">
-<tt class="descclassname">eyecode.aoi.</tt><tt class="descname">hit_test</tt><big>(</big><em>fixations</em>, <em>aois</em>, <em>offsets=None</em>, <em>hit_fun=&lt;function hit_circle at 0x412c230&gt;</em>, <em>hit_radius=20</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#eyecode.aoi.hit_test" title="Permalink to this definition">¶</a></dt>
+<tt class="descclassname">eyecode.aoi.</tt><tt class="descname">hit_test</tt><big>(</big><em>fixations</em>, <em>aois</em>, <em>offsets=None</em>, <em>hit_fun=&lt;function hit_circle at 0x36f0410&gt;</em>, <em>hit_radius=20</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#eyecode.aoi.hit_test" title="Permalink to this definition">¶</a></dt>
 <dd><p>Hit tests fixations against AOI rectangles.</p>
 <table class="docutils field-list" frame="void" rules="none">
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>fixations</strong> : pandas DataFrame</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fixations</strong> : pandas DataFrame</p>
 <blockquote>
 <div><p>A DataFrame with fixations to hit test (fix_x, fix_y)</p>
 </div></blockquote>
@@ -208,7 +209,7 @@ If None, no offset is applied</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>aoi_fixations</strong> : pandas DataFrame</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>aoi_fixations</strong> : pandas DataFrame</p>
 <blockquote class="last">
 <div><p>A copy of the fixations DataFrame with additional columns for each
 offset and AOI kind</p>
@@ -245,6 +246,226 @@ offset and AOI kind</p>
 </dd></dl>
 
 </div>
+<div class="section" id="scanpaths">
+<h2>Scanpaths<a class="headerlink" href="#scanpaths" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="eyecode.aoi.scanpath_from_fixations">
+<tt class="descclassname">eyecode.aoi.</tt><tt class="descname">scanpath_from_fixations</tt><big>(</big><em>fixations</em>, <em>aoi_names=None</em>, <em>mixed=False</em>, <em>repeats=True</em>, <em>name_map=None</em><big>)</big><a class="headerlink" href="#eyecode.aoi.scanpath_from_fixations" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates one or more scanpaths (sequences of fixated AOIs) from fixations.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fixations</strong> : pandas DataFrame</p>
+<blockquote>
+<div><p>A dataframe with one row per fixation</p>
+</div></blockquote>
+<p><strong>aoi_names</strong> : str, list, dict or None, optional</p>
+<blockquote>
+<div><p>May be a string (AOI kind), a list (AOI kinds), or a dictionary mapping
+AOI kinds to lists of AOI names.  If None, all AOI kinds and names in
+fixations will be included in the scanpath.  If specified, only the
+given kinds (keys) and names (values) will be included. An empty list
+or None for a value will include all names for the AOI kind.</p>
+</div></blockquote>
+<p><strong>mixed</strong> : bool, optional</p>
+<blockquote>
+<div><p>If True, a single scanpath with mixed AOI kinds will be generated.
+If False, separate scanpaths for each AOI kind are generated.
+Default is False (multiple scanpaths).</p>
+</div></blockquote>
+<p><strong>repeats</strong> : bool</p>
+<blockquote>
+<div><p>If True, repeated AOI names in scanpaths will be removed (default:
+True).</p>
+</div></blockquote>
+<p><strong>name_map</strong> : dict or None, optional</p>
+<blockquote>
+<div><p>Optional dictionary mapping AOI (kind, name) tuples to unique names
+(across all AOI kinds). This is required only if mixed is True and
+there are overlapping names between kinds.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>pandas DataFrame or dict</strong> :</p>
+<blockquote class="last">
+<div><p>If mixed is True or there is only a single AOI kind, a dataframe is
+returned with the sequence of fixated AOI names (indexed by start
+time). Otherwise, a dictionary is returned with AOI kinds for keys and
+dataframe scanpaths for values.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">eyecode</span> <span class="kn">import</span> <span class="n">aoi</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rects</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">make_grid</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s">&quot;ABCD&quot;</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fixes</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">fixations_from_scanpath</span><span class="p">(</span><span class="s">&quot;AABACDD&quot;</span><span class="p">,</span> <span class="n">rects</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">fixes</span>
+<span class="go">   fix_x  fix_y  start_ms  duration_ms aoi_all</span>
+<span class="go">0     25     25         0          200       A</span>
+<span class="go">1     25     25       220          200       A</span>
+<span class="go">2     75     25       440          200       B</span>
+<span class="go">3     25     25       660          200       A</span>
+<span class="go">4     25     75       880          200       C</span>
+<span class="go">5     75     75      1100          200       D</span>
+<span class="go">6     75     75      1320          200       D</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">sp</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">scanpath_from_fixations</span><span class="p">(</span><span class="n">fixes</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">sp</span>
+</pre></div>
+</div>
+<p>start_ms
+0           A
+220         A
+440         B
+660         A
+880         C
+1100        D
+1320        D
+Name: aoi_all, dtype: object</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="n">sp_no_repeats</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">scanpath_from_fixations</span><span class="p">(</span><span class="n">fixes</span><span class="p">,</span> <span class="n">repeats</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">sp_no_repeats</span>
+</pre></div>
+</div>
+<p>start_ms
+0           A
+440         B
+660         A
+880         C
+1100        D
+Name: aoi_all, dtype: object</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.aoi.fixations_from_scanpath">
+<tt class="descclassname">eyecode.aoi.</tt><tt class="descname">fixations_from_scanpath</tt><big>(</big><em>scanpath</em>, <em>aoi_rectangles</em>, <em>duration_ms=200</em>, <em>saccade_ms=20</em>, <em>aoi_kinds='all'</em>, <em>point_fun='center'</em><big>)</big><a class="headerlink" href="#eyecode.aoi.fixations_from_scanpath" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a dataframe of fixations from the given scanpath.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>scanpath</strong> : list</p>
+<blockquote>
+<div><p>Sequence of fixated AOI names</p>
+</div></blockquote>
+<p><strong>aoi_rectangles</strong> : dict</p>
+<blockquote>
+<div><p>Dictionary mapping AOI names (str) to rectangle tuples (x, y, width, height)</p>
+</div></blockquote>
+<p><strong>duration_ms</strong> : int</p>
+<blockquote>
+<div><p>Duration of every fixation generated (milliseconds)</p>
+</div></blockquote>
+<p><strong>saccade_ms</strong> : int</p>
+<blockquote>
+<div><p>Delay between every fixation generated (milliseconds)</p>
+</div></blockquote>
+<p><strong>aoi_kinds</strong> : str or dict</p>
+<blockquote>
+<div><p>If a string, this will be the kind of every AOI. If a dictionary, keys
+should be AOI names and values should be AOI kinds.</p>
+</div></blockquote>
+<p><strong>point_fun</strong> : &#8220;center&#8221; or callable</p>
+<blockquote>
+<div><p>If &#8220;center&#8221;, fixations will occur in the center of each rectangle.
+Otherwise, point_fun will be called with the name of the AOI and the
+rectangle tuple (x, y, width, height). An (x, y) tuple must be
+returned.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>pandas DataFrame</strong> :</p>
+<blockquote class="last">
+<div><p>A dataframe with a fixation for each item in the scanpath</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<dl class="last docutils">
+<dt><tt class="xref py py-obj docutils literal"><span class="pre">make_grid</span></tt></dt>
+<dd>Create AOI rectangles in a grid</dd>
+</dl>
+</div>
+<p class="rubric">Examples</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">eyecode</span> <span class="kn">import</span> <span class="n">aoi</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rects</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">make_grid</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s">&quot;ABCD&quot;</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fixes</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">fixations_from_scanpath</span><span class="p">(</span><span class="s">&quot;AABACDD&quot;</span><span class="p">,</span> <span class="n">rects</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">fixes</span>
+<span class="go">   fix_x  fix_y  start_ms  duration_ms aoi_all</span>
+<span class="go">0     25     25         0          200       A</span>
+<span class="go">1     25     25       220          200       A</span>
+<span class="go">2     75     25       440          200       B</span>
+<span class="go">3     25     25       660          200       A</span>
+<span class="go">4     25     75       880          200       C</span>
+<span class="go">5     75     75      1100          200       D</span>
+<span class="go">6     75     75      1320          200       D</span>
+</pre></div>
+</div>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span> <span class="nn">eyecode</span> <span class="kn">import</span> <span class="n">aoi</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span> <span class="nf">upper_left</span><span class="p">(</span><span class="n">s</span><span class="p">,</span> <span class="n">rect</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>   <span class="k">return</span> <span class="n">rect</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">rect</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">rects</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">make_grid</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="s">&quot;ABCD&quot;</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mi">50</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">fixes</span> <span class="o">=</span> <span class="n">aoi</span><span class="o">.</span><span class="n">fixations_from_scanpath</span><span class="p">(</span><span class="s">&quot;AABACDD&quot;</span><span class="p">,</span> <span class="n">rects</span><span class="p">,</span> <span class="n">point_fun</span><span class="o">=</span><span class="n">upper_left</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">print</span> <span class="n">fixes</span>
+</pre></div>
+</div>
+<blockquote>
+<div>fix_x  fix_y  start_ms  duration_ms aoi_all</div></blockquote>
+<p>0      0      0         0          200       A
+1      0      0       220          200       A
+2     50      0       440          200       B
+3      0      0       660          200       A
+4      0     50       880          200       C
+5     50     50      1100          200       D
+6     50     50      1320          200       D</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.aoi.transition_matrix">
+<tt class="descclassname">eyecode.aoi.</tt><tt class="descname">transition_matrix</tt><big>(</big><em>scanpath</em>, <em>shape=None</em>, <em>norm=True</em><big>)</big><a class="headerlink" href="#eyecode.aoi.transition_matrix" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns a matrix of transition probabilities based on a scanpath.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>scanpath</strong> : pandas Series</p>
+<blockquote>
+<div><p>Series of fixated AOI names, sorted by fixation time. See the
+scanpath_from_fixations method for computing a scanpath.</p>
+</div></blockquote>
+<p><strong>shape</strong> : tuple or None, optional</p>
+<blockquote>
+<div><p>Shape of the transition matrix (rows, columns). If None, the shape is
+automatically determined by the number of unique scanpath values.</p>
+</div></blockquote>
+<p><strong>norm</strong> : bool, optional</p>
+<blockquote>
+<div><p>If True, the matrix values will be normalized (default: True)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>array</strong> : array_like</p>
+<blockquote class="last">
+<div><p>A numpy array with transition probabilities between AOIs. Rows and
+columns correspond to AOIs in sorted(scanpath.unique()) order.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition seealso">
+<p class="first admonition-title">See also</p>
+<p class="last"><tt class="xref py py-obj docutils literal"><span class="pre">scanpath_from_fixations</span></tt>, <tt class="xref py py-obj docutils literal"><span class="pre">plot.aoi_transitions</span></tt></p>
+</div>
+</dd></dl>
+
+</div>
 <div class="section" id="utility-methods">
 <h2>Utility Methods<a class="headerlink" href="#utility-methods" title="Permalink to this headline">¶</a></h2>
 <p>Below are a few utility functions for making AOI manipulation easier.</p>
@@ -256,13 +477,13 @@ offset and AOI kind</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>aois</strong> : pandas DataFrame</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>aois</strong> : pandas DataFrame</p>
 <blockquote>
 <div><p>A dataframe with a row for each AOI (x, y, width, height)</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>bbox</strong> : list of int</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>bbox</strong> : list of int</p>
 <blockquote class="last">
 <div><p>Bounding box around all aois (x, y, width, height)</p>
 </div></blockquote>
@@ -280,7 +501,7 @@ offset and AOI kind</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>aois</strong> : pandas DataFrame</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>aois</strong> : pandas DataFrame</p>
 <blockquote>
 <div><p>A dataframe with a row for each AOI (x, y, width, height)</p>
 </div></blockquote>
@@ -290,7 +511,7 @@ offset and AOI kind</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>padded_aois</strong> : pandas DataFrame</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>padded_aois</strong> : pandas DataFrame</p>
 <blockquote class="last">
 <div><p>A copy of the input aois with padding applied</p>
 </div></blockquote>
@@ -308,7 +529,7 @@ offset and AOI kind</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>aois</strong> : pandas DataFrame</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>aois</strong> : pandas DataFrame</p>
 <blockquote>
 <div><p>A dataframe with a row for each AOI (x, y, width, height)</p>
 </div></blockquote>
@@ -326,7 +547,7 @@ offset and AOI kind</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>more_aois</strong> : pandas DataFrame</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>more_aois</strong> : pandas DataFrame</p>
 <blockquote class="last">
 <div><p>A copy of the input aois with the new AOI appended</p>
 </div></blockquote>
@@ -344,13 +565,13 @@ offset and AOI kind</p>
 <col class="field-name" />
 <col class="field-body" />
 <tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>fixations</strong> : pandas DataFrame</p>
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fixations</strong> : pandas DataFrame</p>
 <blockquote>
 <div><p>A dataframe with a row for each fixation</p>
 </div></blockquote>
 </td>
 </tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>list of str</strong> :</p>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>list of str</strong> :</p>
 <blockquote class="last">
 <div><p>Column names that correspond to AOI kinds</p>
 </div></blockquote>
@@ -376,7 +597,7 @@ offset and AOI kind</p>
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="plot.html" title="Plotting"
+          <a href="data.html" title="Experiment Data"
              >next</a> |</li>
         <li class="right" >
           <a href="index.html" title="Welcome to eyeCode’s documentation!"
@@ -386,7 +607,7 @@ offset and AOI kind</p>
     </div>
     <div class="footer">
         &copy; Copyright 2013, Michael Hansen.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
     </div>
   </body>
 </html>

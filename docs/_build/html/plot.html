@@ -24,7 +24,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <link rel="top" title="eyeCode 0.1.0 documentation" href="index.html" />
-    <link rel="prev" title="Areas of Interest" href="aoi.html" /> 
+    <link rel="prev" title="Metrics" href="metrics.html" /> 
   </head>
   <body>
     <div class="related">
@@ -34,7 +34,7 @@
           <a href="genindex.html" title="General Index"
              accesskey="I">index</a></li>
         <li class="right" >
-          <a href="aoi.html" title="Areas of Interest"
+          <a href="metrics.html" title="Metrics"
              accesskey="P">previous</a> |</li>
         <li><a href="index.html">eyeCode 0.1.0 documentation</a> &raquo;</li> 
       </ul>
@@ -44,14 +44,15 @@
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Plotting</a><ul>
+<li><a class="reference internal" href="#fixations">Fixations</a></li>
 <li><a class="reference internal" href="#areas-of-interest">Areas of Interest</a></li>
 </ul>
 </li>
 </ul>
 
   <h4>Previous topic</h4>
-  <p class="topless"><a href="aoi.html"
-                        title="previous chapter">Areas of Interest</a></p>
+  <p class="topless"><a href="metrics.html"
+                        title="previous chapter">Metrics</a></p>
   <h3>This Page</h3>
   <ul class="this-page-menu">
     <li><a href="_sources/plot.txt"
@@ -80,12 +81,355 @@
             
   <div class="section" id="plotting">
 <h1>Plotting<a class="headerlink" href="#plotting" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="fixations">
+<h2>Fixations<a class="headerlink" href="#fixations" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="eyecode.plot.fix_circles">
+<tt class="descclassname">eyecode.plot.</tt><tt class="descname">fix_circles</tt><big>(</big><em>fixations</em>, <em>screen_image</em>, <em>radius_min=10</em>, <em>radius_max=35</em>, <em>fill='red'</em>, <em>outline='black'</em>, <em>alpha=0.8</em>, <em>saccade_lines=True</em>, <em>line_fill=None</em><big>)</big><a class="headerlink" href="#eyecode.plot.fix_circles" title="Permalink to this definition">¶</a></dt>
+<dd><p>Draws fixation circles on an image with optional saccade lines.</p>
+<p>Circle radii are scaled by fixation duration, with the longest fixation mapping
+to radius_max and the shortest mapping to radius_min.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fixations</strong> : pandas DataFrame</p>
+<blockquote>
+<div><p>DataFrame with fixations and fix_x, fix_y, start_ms, duration_ms columns</p>
+</div></blockquote>
+<p><strong>screen_image</strong> : PIL Image</p>
+<blockquote>
+<div><p>Image on top of which fixation circles will be drawn</p>
+</div></blockquote>
+<p><strong>radius_min</strong> : int, optional</p>
+<blockquote>
+<div><p>Minimum radius of fixation circles (pixels)</p>
+</div></blockquote>
+<p><strong>radius_max</strong> : int, optional</p>
+<blockquote>
+<div><p>Maximum radius of fixation circles (pixels)</p>
+</div></blockquote>
+<p><strong>fill</strong> : str, optional</p>
+<blockquote>
+<div><p>PIL fill color of the fixation circles (default: &#8216;red&#8217;)</p>
+</div></blockquote>
+<p><strong>outline</strong> : str, optional</p>
+<blockquote>
+<div><p>PIL outline color for fixation circles (default: &#8216;black&#8217;)</p>
+</div></blockquote>
+<p><strong>alpha</strong> : float, optional</p>
+<blockquote>
+<div><p>Transparency of fixation circles (0-1, 1 = opaque).
+Default is 0.8 (20% transparent).</p>
+</div></blockquote>
+<p><strong>saccade_lines</strong> : bool, optional</p>
+<blockquote>
+<div><p>If True, draw saccade lines between each fixation circle.
+Default is True.</p>
+</div></blockquote>
+<p><strong>line_fill</strong> : str or None, optional</p>
+<blockquote>
+<div><p>Color of saccade lines or None to use fill color.
+Default is None.</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>img</strong> : PIL Image</p>
+<blockquote class="last">
+<div><p>Screen image with fixation circles and saccade lines drawn on top.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.plot.highlight_code">
+<tt class="descclassname">eyecode.plot.</tt><tt class="descname">highlight_code</tt><big>(</big><em>code</em>, <em>lex=None</em>, <em>fmt=None</em>, <em>style='default'</em>, <em>font_name='Droid Sans Mono'</em>, <em>font_size=19</em>, <em>image_pad=10</em>, <em>line_pad=10</em>, <em>line_numbers=False</em><big>)</big><a class="headerlink" href="#eyecode.plot.highlight_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>Highlights Python code using Pygments.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>code</strong> : str</p>
+<blockquote>
+<div><p>Code string to highlight</p>
+</div></blockquote>
+<p><strong>lex</strong> : Pygments lexer or None, optional</p>
+<blockquote>
+<div><p>Lexer to use or None for python lexer (default: None)</p>
+</div></blockquote>
+<p><strong>fmt</strong> : Pygments formatter or None, optional</p>
+<blockquote>
+<div><p>Formatter to use or None for png formatter with options
+specified by arguments below (default: None)</p>
+</div></blockquote>
+<p><strong>style</strong> : str</p>
+<blockquote>
+<div><p>Highlighting style (default: &#8216;default&#8217;)</p>
+</div></blockquote>
+<p><strong>font_name</strong> : str</p>
+<blockquote>
+<div><p>Name of font to use (default: &#8216;Droid Sans Mono&#8217;)</p>
+</div></blockquote>
+<p><strong>font_size</strong> : int</p>
+<blockquote>
+<div><p>Size of font to use in points (default: 19)</p>
+</div></blockquote>
+<p><strong>image_pad</strong> : int</p>
+<blockquote>
+<div><p>Padding around image in pixels (default: 10)</p>
+</div></blockquote>
+<p><strong>line_pad</strong> : int</p>
+<blockquote>
+<div><p>Extra padding for new lines in pixels (default: 10)</p>
+</div></blockquote>
+<p><strong>line_numbers</strong> : bool</p>
+<blockquote>
+<div><p>True if Pygments should add line numbers (default: False)</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>img</strong> : PIL Image</p>
+<blockquote class="last">
+<div><p>Image with highlighted code</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.plot.line_code_image">
+<tt class="descclassname">eyecode.plot.</tt><tt class="descname">line_code_image</tt><big>(</big><em>line_fixes</em>, <em>code_image</em>, <em>num_lines</em>, <em>method='time'</em>, <em>image_padding=10</em>, <em>image_dpi=120</em>, <em>bar_height=0.75</em>, <em>bar_mult=1.0</em>, <em>width_inches=5</em>, <em>color=None</em>, <em>**kwargs</em><big>)</big><a class="headerlink" href="#eyecode.plot.line_code_image" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots fixation information as bars next to code lines.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>line_fixes</strong> : pandas DataFrame</p>
+<blockquote>
+<div><p>DataFrame with one fixation per row + line annotation. Must have
+columns start_ms, duration_ms, line.</p>
+</div></blockquote>
+<p><strong>code_image</strong> : PIL Image</p>
+<blockquote>
+<div><p>Image with highlighted code (see plot.hightlight_code)</p>
+</div></blockquote>
+<p><strong>num_lines</strong> : int</p>
+<blockquote>
+<div><p>Number of lines in the code</p>
+</div></blockquote>
+<p><strong>method</strong> : str or callable, optional</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Method for determining size of line bars. May be one of:</dt>
+<dd><ul class="first last simple">
+<li>&#8216;time&#8217; - total fixation duration</li>
+<li>&#8216;count&#8217; - number of fixations</li>
+<li>&#8216;first&#8217; - time of first fixation</li>
+</ul>
+</dd>
+<dt>or a callable with 2 argments (frame, lines) where</dt>
+<dd><ul class="first last simple">
+<li>frame is the line_fixes DataFrame</li>
+<li>lines is a list of line numbers</li>
+</ul>
+</dd>
+</dl>
+<p>that returns a list of bar heights for each line.
+Default is &#8216;time&#8217;.</p>
+</div></blockquote>
+<p><strong>image_padding</strong> : int, optional</p>
+<blockquote>
+<div><p>Padding expected around image in pixels (default: 10)</p>
+</div></blockquote>
+<p><strong>image_dpi</strong> : int, optional</p>
+<blockquote>
+<div><p>Dots per inch for final rendered image</p>
+</div></blockquote>
+<p><strong>bar_height</strong> : float, optional</p>
+<blockquote>
+<div><p>Height (or thickness) of horizontal bars (default: 0.75)</p>
+</div></blockquote>
+<p><strong>bar_mult</strong> : float, optional</p>
+<blockquote>
+<div><p>Factor to multiply bars&#8217; vertical positions by (default: 1.0)</p>
+</div></blockquote>
+<p><strong>width_inches</strong> : float, optional</p>
+<blockquote>
+<div><p>Width of final rendered image in inches</p>
+</div></blockquote>
+<p><strong>color</strong> : str or None, optional</p>
+<blockquote>
+<div><p>Color of bars or None for automatic selection</p>
+</div></blockquote>
+<p><strong>**kwargs</strong> : keyword arguments</p>
+<blockquote>
+<div><p>Arguments passed through to matplotlib barh function</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>img</strong> : PIL Image</p>
+<blockquote class="last">
+<div><p>Image with bars and code combined</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.plot.fix_timeline">
+<tt class="descclassname">eyecode.plot.</tt><tt class="descname">fix_timeline</tt><big>(</big><em>line_fixes</em>, <em>num_lines</em>, <em>output_fixes=None</em>, <em>ax=None</em>, <em>figsize=None</em><big>)</big><a class="headerlink" href="#eyecode.plot.fix_timeline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots a timeline of line fixations by seconds.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>line_fixes</strong> : pandas DataFrame</p>
+<blockquote>
+<div><p>DataFrame with one fixation per row + line annotation. Must have
+columns start_ms, end_ms, line.</p>
+</div></blockquote>
+<p><strong>num_lines</strong> : int</p>
+<blockquote>
+<div><p>Number of lines in the program</p>
+</div></blockquote>
+<p><strong>output_fixes</strong> : pandas DataFrame or None, optional</p>
+<blockquote>
+<div><p>DataFrame with fixations on the output box (interface kind).
+If None, only line fixations are displayed (default: None).</p>
+</div></blockquote>
+<p><strong>ax</strong> : matplotlib Axes or None, optional</p>
+<blockquote>
+<div><p>An Axes to plot onto or None to create a new one (default: None)</p>
+</div></blockquote>
+<p><strong>figsize</strong> : tuple or None, optional</p>
+<blockquote>
+<div><p>Size of figure in inches when creating new Axes (width, height).
+If None, default figsize is used (default: None).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>ax</strong> : matplotlib Axes</p>
+<blockquote class="last">
+<div><p>Axes with timeline plotted on top</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
 <div class="section" id="areas-of-interest">
 <h2>Areas of Interest<a class="headerlink" href="#areas-of-interest" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
-<dt id="eyecode.plot.aoi.draw_rectangles">
-<tt class="descclassname">eyecode.plot.aoi.</tt><tt class="descname">draw_rectangles</tt><big>(</big><em>aoi_rectangles, screen_image, colors=['#C10020', '#53377A', '#00538A', '#007D34', '#803E75', '#A6BDD7', '#FFB300', '#B32851', '#FF6800', '#F6768E', '#FF8E00', '#FF7A5C', '#F4C800', '#7F180D', '#93AA00', '#593315', '#F13A13', '#232C16', '#CEA262', '#817066', '#FFFFFF', '#000000'], outline='#000000', alpha=0.5</em><big>)</big><a class="reference internal" href="_modules/eyecode/plot/aoi.html#draw_rectangles"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#eyecode.plot.aoi.draw_rectangles" title="Permalink to this definition">¶</a></dt>
+<dt id="eyecode.plot.draw_rectangles">
+<tt class="descclassname">eyecode.plot.</tt><tt class="descname">draw_rectangles</tt><big>(</big><em>aoi_rectangles</em>, <em>screen_image</em>, <em>colors=None</em>, <em>outline='black'</em>, <em>alpha=0.5</em><big>)</big><a class="headerlink" href="#eyecode.plot.draw_rectangles" title="Permalink to this definition">¶</a></dt>
 <dd><p>Draws AOI rectangles on to an image.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>aoi_rectangles</strong> : pandas DataFrame</p>
+<blockquote>
+<div><p>DataFrame with a row for each rectangle (x, y, width, height columns)</p>
+</div></blockquote>
+<p><strong>screen_image</strong> : PIL Image</p>
+<blockquote>
+<div><p>Image on top of which AOI rectangles will be drawn</p>
+</div></blockquote>
+<p><strong>colors</strong> : list or None, optional</p>
+<blockquote>
+<div><p>List of PIL fill colors for each AOI kind. Colors will by cycled through
+if there are more AOI kinds than colors. If None, kelly_colors are used.
+Default is None (kelly_colors).</p>
+</div></blockquote>
+<p><strong>outline</strong> : str, optional</p>
+<blockquote>
+<div><p>Rectangle outline color (default is &#8216;black&#8217;)</p>
+</div></blockquote>
+<p><strong>alpha</strong> : float, optional</p>
+<blockquote>
+<div><p>Transparency of AOI rectangles (0-1, 1 = opaque).
+Default is 0.5 (50% transparency).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>img</strong> : PIL Image</p>
+<blockquote class="last">
+<div><p>Screen image with AOI rectangles drawn on top</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="eyecode.plot.aoi_barplot">
+<tt class="descclassname">eyecode.plot.</tt><tt class="descname">aoi_barplot</tt><big>(</big><em>fixations</em>, <em>method='time'</em>, <em>ylabel=None</em>, <em>scalar=0.001</em>, <em>ax=None</em>, <em>figsize=None</em><big>)</big><a class="headerlink" href="#eyecode.plot.aoi_barplot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Plots fixation time or counts for all AOI kinds and names.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>fixations</strong> : pandas DataFrame</p>
+<blockquote>
+<div><p>DataFrame with one row per fixation and AOI hits. Must have duration_ms
+and start_ms columns.</p>
+</div></blockquote>
+<p><strong>method</strong> : str or callable, optional</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>Method for determining height of bars. May be one of:</dt>
+<dd><ul class="first last simple">
+<li>&#8216;time&#8217; - total fixation duration</li>
+<li>&#8216;count&#8217; - number of fixations</li>
+<li>&#8216;first&#8217; - time of first fixation</li>
+</ul>
+</dd>
+<dt>or a callable with 2 argments (frame, column) where</dt>
+<dd><ul class="first last simple">
+<li>frame is the fixations DataFrame</li>
+<li>column is the name of the AOI column</li>
+</ul>
+</dd>
+</dl>
+<p>that returns the height of the bar for the given AOI.
+Default is &#8216;time&#8217;.</p>
+</div></blockquote>
+<p><strong>ylabel</strong> : str or None, optional</p>
+<blockquote>
+<div><p>Label used for the y-axis. If None, a label is chosen depending on the
+method (time, count, or first).</p>
+</div></blockquote>
+<p><strong>scalar</strong> : float, optional</p>
+<blockquote>
+<div><p>Number used to scale the height of bars. This is 0.001 by default,
+meaning time units will be in seconds rather than milliseconds.</p>
+</div></blockquote>
+<p><strong>ax</strong> : matplotlib Axes or None, optional</p>
+<blockquote>
+<div><p>An Axes to plot onto or None to create a new one (default: None)</p>
+</div></blockquote>
+<p><strong>figsize</strong> : tuple or None, optional</p>
+<blockquote>
+<div><p>Size of figure in inches when creating new Axes (width, height).
+If None, default figsize is used (default: None).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><strong>ax</strong> : matplotlib Axes</p>
+</td>
+</tr>
+</tbody>
+</table>
 </dd></dl>
 
 </div>
@@ -104,14 +448,14 @@
           <a href="genindex.html" title="General Index"
              >index</a></li>
         <li class="right" >
-          <a href="aoi.html" title="Areas of Interest"
+          <a href="metrics.html" title="Metrics"
              >previous</a> |</li>
         <li><a href="index.html">eyeCode 0.1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2013, Michael Hansen.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
     </div>
   </body>
 </html>
