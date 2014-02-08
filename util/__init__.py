@@ -262,3 +262,26 @@ def significant_p(p_value):
         return "p < .05"
     
     return ""
+
+def grouper(n, iterable, fillvalue=None):
+    """grouper(3, 'ABCDEFG', 'x') --> ABC DEF Gxx
+    
+    See also
+    --------
+    http://www.python.org/doc//current/library/itertools.html
+
+    """
+    args = [iter(iterable)] * n
+    return it.izip_longest(fillvalue=fillvalue, *args)
+
+def pairwise(iterable, fillvalue=None):
+    """s -> (s0,s1), (s1,s2), (s2, s3), ...
+
+    See also
+    --------
+    http://www.python.org/doc//current/library/itertools.html
+
+    """
+    a, b = it.tee(iterable)
+    next(b, fillvalue)
+    return it.izip(a, b)

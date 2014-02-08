@@ -1,6 +1,11 @@
 Plotting
 ========
 
+Code
+----
+
+.. autofunction:: eyecode.plot.draw_code
+
 Fixations
 ---------
 

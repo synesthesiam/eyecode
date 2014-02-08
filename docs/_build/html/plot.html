@@ -44,6 +44,7 @@
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
 <li><a class="reference internal" href="#">Plotting</a><ul>
+<li><a class="reference internal" href="#code">Code</a></li>
 <li><a class="reference internal" href="#fixations">Fixations</a></li>
 <li><a class="reference internal" href="#areas-of-interest">Areas of Interest</a></li>
 </ul>
@@ -81,6 +82,79 @@
             
   <div class="section" id="plotting">
 <h1>Plotting<a class="headerlink" href="#plotting" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="code">
+<h2>Code<a class="headerlink" href="#code" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="eyecode.plot.draw_code">
+<tt class="descclassname">eyecode.plot.</tt><tt class="descname">draw_code</tt><big>(</big><em>code</em>, <em>font_path=None</em>, <em>font_size=18</em>, <em>font=None</em>, <em>image=None</em>, <em>line_offset=5</em>, <em>offset=(0</em>, <em>0)</em>, <em>padding=(0</em>, <em>0)</em>, <em>fill='black'</em>, <em>bg_color='white'</em><big>)</big><a class="headerlink" href="#eyecode.plot.draw_code" title="Permalink to this definition">¶</a></dt>
+<dd><p>Renders code on to a background image with a given font and spacing.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><p class="first"><strong>code</strong> : str or list</p>
+<blockquote>
+<div><p>Code to render as a string or a list of lines. If a str, the code will
+by split by &#8216;n&#8217;.</p>
+</div></blockquote>
+<p><strong>font_path</strong> : str, optional</p>
+<blockquote>
+<div><p>Path to a truetype font for rendering the code. If None and font is not
+provided, the system&#8217;s default monospace font will be used (default:
+None).</p>
+</div></blockquote>
+<p><strong>font_size</strong> : int, optional</p>
+<blockquote>
+<div><p>Size of font in pixels (default: 18).</p>
+</div></blockquote>
+<p><strong>font</strong> : PIL ImageFont, optional</p>
+<blockquote>
+<div><p>Font to use for rendering. If provided, font_path is ignored (default:
+None).</p>
+</div></blockquote>
+<p><strong>image</strong> : PIL.Image, optional</p>
+<blockquote>
+<div><p>Background image behind rendered code. If None, a new image is created
+to contain the rendered lines and filled with bg_color (default: None).</p>
+</div></blockquote>
+<p><strong>line_offset</strong> : int, optional</p>
+<blockquote>
+<div><p>Number of pixels between lines of code (default: 5).</p>
+</div></blockquote>
+<p><strong>offset</strong> : tuple of int, optional</p>
+<blockquote>
+<div><p>Horizontal and vertical offset from top-left corner for rendered code
+in pixels (default: (0, 0)).</p>
+</div></blockquote>
+<p><strong>padding</strong> : tuple of int, optional</p>
+<blockquote>
+<div><p>Symmentric horizontal and vertical padding around rendered code if
+background image is not provided (default: (0, 0)).</p>
+</div></blockquote>
+<p><strong>fill</strong> : str, optional</p>
+<blockquote>
+<div><p>Fill color for rendered code (default: &#8216;black&#8217;).</p>
+</div></blockquote>
+<p><strong>bg_color</strong> : str, optional</p>
+<blockquote>
+<div><p>Fill color for background if background image is not provided (default:
+&#8216;white&#8217;).</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>code_image</strong> : PIL.Image</p>
+<blockquote class="last">
+<div><p>Image with code rendered on top of background.</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>Requires the PIL image library: <a class="reference external" href="http://www.pythonware.com/products/pil/">http://www.pythonware.com/products/pil/</a></p>
+</dd></dl>
+
+</div>
 <div class="section" id="fixations">
 <h2>Fixations<a class="headerlink" href="#fixations" title="Permalink to this headline">¶</a></h2>
 <dl class="function">
@@ -455,7 +529,7 @@ If None, default figsize is used (default: None).</p>
     </div>
     <div class="footer">
         &copy; Copyright 2013, Michael Hansen.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.1.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2.
     </div>
   </body>
 </html>

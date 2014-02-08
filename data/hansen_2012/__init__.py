@@ -78,6 +78,10 @@ def all_fixations():
     """Hit-tested fixations for all trials"""
     return __read_csv("all_fixations")
 
+def all_saccades():
+    """Saccades for all trials"""
+    return __read_csv("all_saccades")
+
 def line_fixations():
     """Hit-tested fixations with numeric line column for all trials"""
     return __read_csv("line_fixations")

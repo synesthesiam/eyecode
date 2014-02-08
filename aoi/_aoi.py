@@ -3,7 +3,6 @@ import numpy as np
 import pandas
 
 from ..util import just2, window
-from lxml import builder as lb
 
 # Constants {{{
 
@@ -90,7 +89,7 @@ def get_aoi_kinds(fixations):
 def col_to_kind(column):
     return column.split("_", 1)[1]
 
-def envelope(aois, padding=0):
+def envelope(aois, padding=0, kind="", name=""):
     """Returns a rectangle that envelopes the given AOI rectangles.
     
     Parameters
@@ -98,10 +97,16 @@ def envelope(aois, padding=0):
     aois : pandas DataFrame
         A dataframe with a row for each AOI (x, y, width, height)
 
+    kind : str, optional
+        AOI kind for returned DataFrame
+
+    name : str, optional
+        AOI name for returned DataFrame
+
     Returns
     -------
-    bbox : list of int
-        Bounding box around all aois (x, y, width, height)
+    bbox : pandas DataFrame
+        Bounding box dataframe around all aois
     
     """
     x1, y1 = sys.maxint, sys.maxint
@@ -111,9 +116,13 @@ def envelope(aois, padding=0):
         x1, y1 = min(x1, x), min(y1, y)
         x2, y2 = max(x + w, x2), max(y + h, y2)
 
-    return [x1 - (padding/2), y1 - (padding/2),
+    bbox = [x1 - (padding/2), y1 - (padding/2),
             x2 - x1 + padding,
-            y2 - y1 + padding]
+            y2 - y1 + padding,
+            kind, name]
+
+    cols = ["x", "y", "width", "height", "kind", "name"]
+    return pandas.DataFrame([bbox], columns=cols)
 
 def pad(aois, padding):
     """Pads the given AOIs.
@@ -176,6 +185,14 @@ def add_bbox(aois, bbox, kind, name):
         "width"  : bbox[2],
         "height" : bbox[3]
     }, ignore_index=True)
+
+def combine_aois(aois, kind, names, new_kind, new_name):
+    """Adds a new AOI whose bounding box envelopes the given kind/names.
+    """
+    filtered_aois = aois[(aois.kind == kind) & (aois.name.isin(names))]
+    return pandas.concat(
+            [aois, envelope(filtered_aois, kind=new_kind, name=new_name)],
+            ignore_index=False)
 
 def only_lines(aois, lines, kind="line", fmt="line {0}"):
     """Returns line-based AOIs that match the given line numbers."""
@@ -664,6 +681,187 @@ def find_rectangles(screen_image, black_thresh=255, white_row_thresh=3,
 
     return rect_df
 
+def code_to_aois(code, lexer=None, filename=None,
+        font_size=(11, 18), line_offset=5,
+        padding=(2, 5), token_kind="token",
+        line_kind="line"):
+    """
+    Creates area of interest (AOI) rectangles from code using Pygments. AOIs
+    are created for every syntactic token and line. A monospace font is
+    assumed.
+    
+    Parameters
+    ----------
+    code : str
+        Code with Unix-style newlines ('\\n') in any language supported by
+        Pygments. See http://pygments.org/docs/lexers for available languages.
+
+    lexer : pygments.lexer.Lexer, optional
+        A Pygments lexer that will be used to tokenize the code. If None, a
+        filename must be provided to help Pygments guess the language (default:
+        None).
+
+    filename : str, optional
+        A file name with a language-specific extension used to help Pygments
+        guess the code's language. This is required if no lexer is provided
+        (default: None).
+
+    font_size : tuple of int, optional
+        Width and height of the code's monospace font in pixels (default: (11,
+        18)).
+
+    line_offset : int, optional
+        Number of pixels between lines of code (default: 5)       
+
+    padding : tuple of int, optional
+        Symmentric horizontal and vertical padding around each AOI rectangle
+        (default: (2, 5)).
+
+    token_kind : str, optional
+        AOI kind for token AOIs in the returned DataFrame (default: 'token').
+
+    line_kind : str, optional
+        AOI kind for line AOIs in the returned DataFrame (default: 'line').
+    
+    Returns
+    -------
+    aois : pandas DataFrame
+        DataFrame with one row per AOI rectangle. Has columns x, y, width,
+        height, kind, name.
+    
+    """
+    import pygments
+    import pygments.lexers
+    if lexer is None:
+        msg = "filename is required if no lexer is provided"
+        assert filename is not None, msg
+        lexer = pygments.lexers.guess_lexer_for_filename(filename, code)
+
+    # Convert to 2-d tokens and then to monospace AOIs
+    tokens = lexer.get_tokens_unprocessed(code)
+    tokens2d = tokens_to_2d(tokens)
+    aois = tokens2d_monospace_aois(tokens2d, font_size=font_size,
+            line_offset=line_offset, padding=padding,
+            token_kind=token_kind, line_kind=line_kind)
+
+    return aois
+
+def tokens_to_2d(tokens):
+    """Converts unprocessed pygments tokens to 2-d coordinates.
+
+    Parameters
+    ----------
+    tokens : list of tuple
+        Unprocessed token list (idx, type, text)
+
+    Returns
+    -------
+    tokens2d : list of tuple
+        2-d unprocessed token list (x, y, type, text)
+
+    Notes
+    -----
+    Line breaks are assumed on Token.Text tokens with text == '\\n'
+
+    """
+    import pygments
+    import pygments.token
+    from pygments.token import Token
+    y = 0
+    x_offset = 0
+    for idx, kind, text in tokens:
+        # Break lines at '\n' text tokens
+        if (kind == Token.Text) and (text == "\n"):
+            y += 1
+            x_offset = idx + 1
+        else:
+            yield (idx - x_offset, y, kind, text)
+
+def tokens2d_monospace_aois(tokens2d, font_size=(11, 18),
+                            line_offset=5, padding=(0, 0),
+                            token_kind="token",
+                            line_kind="line"):
+    """
+    Creates area of interest (AOI) rectangles from 2-d Pygments tokens. AOIs
+    are created for every syntactic token and line. A monospace font is
+    assumed.
+    
+    Parameters
+    ----------
+    tokens2d : list of tuples
+        2-d unprocessed token list (x, y, type, text)
+
+    font_size : tuple of int, optional
+        Width and height of the code's monospace font in pixels (default: (11,
+        18)).
+
+    line_offset : int, optional
+        Number of pixels between lines of code (default: 5)       
+
+    padding : tuple of int, optional
+        Symmentric horizontal and vertical padding around each AOI rectangle
+        (default: (0, 0)).
+
+    token_kind : str, optional
+        AOI kind for token AOIs in the returned DataFrame (default: 'token').
+
+    line_kind : str, optional
+        AOI kind for line AOIs in the returned DataFrame (default: 'line').
+    
+    Returns
+    -------
+    aois : pandas DataFrame
+        DataFrame with one row per AOI rectangle. Has columns x, y, width,
+        height, kind, name.
+
+    Notes
+    -----
+    Requires the Pygments library: http://pygments.org/
+    
+    """
+    rows = []
+    kind_counts = {}
+
+    # Process each 2-d token
+    for x, y, t_kind, text in tokens2d:
+        # Create rectangle around syntax token
+        aoi_x = x * font_size[0] - (padding[0] / 2)
+        aoi_y = (y * font_size[1]) + (y * line_offset) - (padding[1] / 2)
+        aoi_width = len(text) * font_size[0] + padding[0]
+        aoi_height = font_size[1] + padding[1]
+        aoi_kind = token_kind
+        
+        # Automatically generate AOI names based on token kind (e.g., Keyword
+        # 1, Keyword 2).
+        if t_kind not in kind_counts:
+            kind_counts[t_kind] = 0
+            
+        kind_counts[t_kind] += 1
+        aoi_name = "{0} {1}".format(t_kind, kind_counts[t_kind])
+        rows.append([aoi_x, aoi_y, aoi_width, aoi_height,
+                     aoi_kind, aoi_name])
+        
+    cols = ["x", "y", "width", "height", "kind", "name"]
+    tokens_df = pandas.DataFrame(rows, columns=cols)
+    
+    # Create line AOIs
+    rows = []
+    for y, frame in tokens_df.groupby("y"):
+        # Determine line number from y coordinate
+        line_idx = (y + (padding[1] / 2)) / \
+            (font_size[1] + line_offset)
+
+        # The rectangle extends to the end of the rightmost token AOI
+        max_x = frame.irow(frame.x.argmax())
+        width = max_x["x"] + max_x["width"]
+        height = font_size[1] + padding[1]
+        rows.append([frame["x"].min(), y,
+                     width, height, line_kind,
+                     "line {0}".format(line_idx + 1)])
+        
+    # Combine line and token AOIs for final DataFrame
+    lines_df = pandas.DataFrame(rows, columns=cols)
+    return pandas.concat([tokens_df, lines_df], ignore_index=True)
 
 def make_grid(rows, cols, names, width=100, height=None):
     """Creates a grid of equally-sized AOIs rectangles."""
@@ -834,13 +1032,17 @@ def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle,
     ----------
     fixations : pandas DataFrame
         A DataFrame with fixations to hit test (fix_x, fix_y)
+
     aois : pandas DataFrame
         A DataFrame with areas of interest (kind, name, x, y, width, height)
+
     offsets : pandas DataFrame or None
         A DataFrame with different fixations offsets to apply (name, x, y).
         If None, no offset is applied
+
     hit_fun : callable
         Hit testing function. See hit_point and hit_circle for examples
+
     hit_radius : int
         Fixation circle radius for hit_circle
 
@@ -1137,6 +1339,7 @@ def code_fixations(fixations, lines_text_order, lines_exec_order,
     return tags_df
 
 def make_xml_coding(xml_root, tags, media_url):
+    from lxml import builder as lb
     from urlparse import urlunparse
 
     last_annotation_prop = xml_root.find("./HEADER/PROPERTY[@NAME='lastUsedAnnotationId']")
@@ -1212,3 +1415,4 @@ def make_xml_coding(xml_root, tags, media_url):
     return xml_root
 
 # }}}
+

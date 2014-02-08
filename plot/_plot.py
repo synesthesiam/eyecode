@@ -569,3 +569,167 @@ def fix_timeline(line_fixes, num_lines,
 
 # }}}
 
+# Metric plots {{{
+
+def rolling_metrics(results, columns, names=None, colors=None,
+        markersize=5, ax=None, figsize=None):
+    from matplotlib.ticker import MultipleLocator, FormatStrFormatter, FuncFormatter
+    fig = None
+
+    if ax is None:
+        fig = pyplot.figure(figsize=figsize)
+        ax = pyplot.axes()
+    else:
+        fig = ax.figure
+   
+    axes = [ax] + [ax.twinx() for c in columns[1:]]
+
+    if colors is None:
+        colors = kelly_colors
+    colors = it.cycle(colors)
+
+    if names is None:
+        names = columns
+    
+    #fig.subplots_adjust(left=0, right=0.75)
+    #axes[2].spines['right'].set_position(('axes', 1.1))
+    #axes[2].set_frame_on(True)
+    #axes[2].patch.set_visible(False)
+    
+    # Plot left y-axis
+    color = next(colors)
+    axes[0].plot(results.index, results[columns[0]], color=color, marker="o",
+            markersize=markersize, label=names[0])
+    axes[0].set_ylabel(names[0], color=color)
+    axes[0].tick_params(axis="y", colors=color)
+    
+    if len(columns) > 1:
+        # Plot right y-axis
+        color = next(colors)
+        axes[1].plot(results.index, results[columns[1]], color=color, marker="*",
+                markersize=markersize, label=names[1])
+        axes[1].set_ylabel(names[1], color=color)
+        axes[1].tick_params(axis="y", colors=color)
+    
+    #axes[2].plot(results.index, results.fcount, color="g", marker="^", markersize=markersize, label="Fix Count")
+    #axes[2].set_ylabel("Fixation Count", color="g")
+    #axes[2].tick_params(axis="y", colors="g")
+    
+    # Adjust x-axis to seconds
+    ax.set_xlabel("Time (sec)")
+    ax.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: str(int(x) / 1000)))
+    ax.xaxis.set_major_locator(MultipleLocator(5000))
+    for label in ax.get_xticklabels():
+        label.set_rotation(90)
+    
+    return ax
+
+def find_font(name="monospace"):
+    from matplotlib import font_manager
+    return font_manager.findfont(name)
+
+def text_size(font_path, font_size, text="|"):
+    from PIL import Image, ImageDraw, ImageFont
+    font = ImageFont.truetype(font_path, font_size)
+    draw = ImageDraw.Draw(Image.new("1", (1, 1)))
+    size = draw.textsize(text, font=font)
+    del draw
+    return size
+
+def draw_code(code, font_path=None, font_size=18,
+        font=None, image=None, line_offset=5, offset=(0, 0),
+        padding=(0, 0), fill="black", bg_color="white"):
+    """Renders code on to a background image with a given font and spacing.
+    
+    Parameters
+    ----------
+    code : str or list
+        Code to render as a string or a list of lines. If a str, the code will
+        by split by '\\n'.
+
+    font_path : str, optional
+        Path to a truetype font for rendering the code. If None and font is not
+        provided, the system's default monospace font will be used (default:
+        None).
+
+    font_size : int, optional
+        Size of font in pixels (default: 18).
+
+    font : PIL ImageFont, optional
+        Font to use for rendering. If provided, font_path is ignored (default:
+        None).
+
+    image : PIL.Image, optional
+        Background image behind rendered code. If None, a new image is created
+        to contain the rendered lines and filled with bg_color (default: None).
+
+    line_offset : int, optional
+        Number of pixels between lines of code (default: 5).
+
+    offset : tuple of int, optional
+        Horizontal and vertical offset from top-left corner for rendered code
+        in pixels (default: (0, 0)).
+
+    padding : tuple of int, optional
+        Symmentric horizontal and vertical padding around rendered code if
+        background image is not provided (default: (0, 0)).
+
+    fill : str, optional
+        Fill color for rendered code (default: 'black').
+
+    bg_color : str, optional  
+        Fill color for background if background image is not provided (default:
+        'white').
+    
+    Returns
+    -------
+    code_image : PIL.Image
+        Image with code rendered on top of background.
+
+    Notes
+    -----
+    Requires the PIL image library: http://www.pythonware.com/products/pil/
+    
+    """
+    from PIL import Image, ImageDraw, ImageFont
+
+    if font is None:
+        if font_path is None:
+            # Look up system monospace font
+            font_path = find_font()
+        font = ImageFont.truetype(font_path, font_size)
+
+    # If code is a string, split into lines
+    if isinstance(code, str):
+        lines = code.split("\n")
+    else:
+        lines = code
+
+    # Create background image to fit rendered code
+    if image is None:
+        temp_image = Image.new("RGB", (1, 1))
+        draw = ImageDraw.Draw(temp_image)
+        max_x, max_y = offset
+        for line in lines:
+            line_size = draw.textsize(line.rstrip(), font=font)
+            max_x = max(max_x, offset[0] + line_size[0])
+            max_y += font_size + line_offset
+
+        max_x = int(np.ceil(max_x)) + padding[0]
+        max_y = int(np.ceil(max_y)) + padding[1]
+        image = Image.new("RGB", (max_x + 1, max_y + 1), bg_color)
+        del draw, temp_image
+
+    draw = ImageDraw.Draw(image)
+
+    # Draw code text onto background image
+    y = offset[1]
+    for i, line in enumerate(lines):
+        x = offset[0]
+        draw.text((x, y), line.rstrip(), font=font, fill=fill)
+        y += font_size + line_offset
+
+    del draw
+    return image
+
+# }}}

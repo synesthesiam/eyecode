@@ -23,6 +23,8 @@ function.
 
 .. autofunction:: eyecode.aoi.find_rectangles
 
+.. autofunction:: eyecode.aoi.code_to_aois
+
 
 Hit Testing
 -----------

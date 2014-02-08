@@ -1,2 +1,2 @@
 all:
-	ipython notebook --pylab=inline
+	ipython notebook --pylab=inline tutorial.ipynb

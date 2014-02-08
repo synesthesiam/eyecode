@@ -1,9 +1,11 @@
 import sys, os
+# eyecode/data/hansen_2012
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 
 import gzip, pandas, json
 import eyecode.aoi, eyecode.util
 import numpy as np
+import scipy.spatial
 from lxml import etree
 from glob import glob
 from collections import defaultdict
@@ -188,6 +190,61 @@ def task_all_fixations():
         "actions"  : [make_all],
         "file_dep" : xml_paths,
         "targets"  : ["all_fixations.csv.gz"]
+    }
+
+# -------------------------------------------------- 
+
+def task_all_saccades():
+    def make_all():
+        output_rows = []
+
+        # Experiments
+        for path in xml_paths:
+            xml_node = etree.parse(path)
+            exp = xml_node.xpath("/experiment")[0]
+            exp_id = int(exp.attrib["id"])
+
+            # Trials
+            for trial in exp.xpath(".//trial"):
+                trial_id = int(trial.attrib["id"])
+
+                for sacc in trial.xpath(".//saccade"):
+                    output_rows.append([
+                        exp_id, trial_id,
+                        trial.attrib["base"], trial.attrib["version"],
+                        int(sacc.attrib["start"]), int(sacc.attrib["end"]),
+                        float(sacc.attrib["x1"]), float(sacc.attrib["y1"]),
+                        float(sacc.attrib["x2"]), float(sacc.attrib["y2"])
+                    ])
+
+        cols = ["exp_id", "trial_id", "base", "version",
+                "start_ms", "end_ms", "sacc_x1", "sacc_y1",
+                "sacc_x2", "sacc_y2"]
+
+        saccs_df = pandas.DataFrame(output_rows, columns=cols)
+
+        # Add duration column
+        saccs_df["duration_ms"] = saccs_df \
+                .apply(lambda r: r["end_ms"] - r["start_ms"], axis=1)
+
+        # Exclude zero duration saccades
+        saccs_df = saccs_df[saccs_df.duration_ms > 0]
+
+        # Add Euclidean distance between start and end points
+        dist = scipy.spatial.distance.euclidean
+        saccs_df["dist_euclid"] = saccs_df \
+                .apply(lambda r: dist(
+                    r[["sacc_x1", "sacc_y1"]].values,
+                    r[["sacc_x2", "sacc_y2"]].values
+                ), axis=1)
+
+        with gzip.open("all_saccades.csv.gz", "w") as out_file:
+            saccs_df.to_csv(out_file, index=False)
+
+    return {
+        "actions"  : [make_all],
+        "file_dep" : xml_paths,
+        "targets"  : ["all_saccades.csv.gz"]
     }
 
 # -------------------------------------------------- 

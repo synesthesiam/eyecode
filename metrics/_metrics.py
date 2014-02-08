@@ -1,3 +1,4 @@
+import operator
 import numpy as np
 import pandas
 from ..aoi import get_aoi_columns, get_aoi_kinds, kind_to_col, kinds_to_cols
@@ -131,29 +132,190 @@ def first_fix_ms_aoi(aoi_fixes_df):
 
     return first_df.start_ms
 
-def percent_fixations_on_aoi(aoi_fixations):
-    num_fixes = fixations_per_aoi(aoi_fixations)
-    return num_fixes.groupby(level=0).apply(lambda f: f / float(f.sum()))
+def fixation_saccade_proportion(fixations, saccades, group_col=None):
+    """Calculates the proportion of fixation and saccade durations.
 
-def fixation_spatial_density(fixations, grid_bbox=None, num_cols=10, num_rows=10, threshold=1):
+    Parameters
+    ----------
+    fixations : pandas DataFrame
+        DataFrame with one row per fixation. Must have duration_ms column.
+
+    saccades : pandas DataFrame
+        DataFrame with one row per saccade. Must have duration_ms column.
+
+    group_col : str, list, or None
+        Column or list of columns by which to group fixations and saccades. If
+        None, no grouping occurs (default: None).
+
+    Returns
+    -------
+    prop : float or pandas Series
+        Proportion of fixation and saccade durations. Float when group_col is
+        None, Series otherwise.
+
+    """
+    if group_col is not None:
+        fixations = fixations.groupby(group_col)
+        saccades = saccades.groupby(group_col)
+
+    return fixations.duration_ms.sum() / \
+            saccades.duration_ms.sum().astype(float)
+
+
+def scanpath_length(fixations, metric="euclidean"):
+    """Length of fixation scanpath in pixels (i.e., sum of distances between
+    fixations).
+
+    Parameters
+    ----------
+    fixations : pandas DataFrame
+        DataFrame with one fixation per row. Requires fix_x and fix_y columns.
+
+    metric : str, optional
+        Distance metric passed to scipy.spatial.distance.pdist. Default is
+        "euclidean".
+
+    Returns
+    -------
+    length : float
+        Total length of fixation scanpath (pixels)
+
+    See also
+    --------
+    scipy.spatial.distance.pdist
+
+    """
+    from scipy import spatial
+    return spatial.distance.pdist(fixations[["fix_x", "fix_y"]], metric=metric).sum()
+
+def avg_saccade_length(saccades):
+    """Average saccade distance (Euclidean).
+
+    Parameters
+    ----------
+    saccades : pandas DataFrame
+        DataFrame with one saccade per row. Requires dist_euclid column.
+
+    Returns
+    -------
+    length : float
+        Average saccade distance
+
+    """
+    return saccades["dist_euclid"].mean()
+
+def convex_hull_area(fixations):
+    """Area of convex hull around all fixation points.
+
+    Parameters
+    ----------
+    fixations : pandas DataFrame
+        DataFrame with one row per fixation. Requires fix_x and fix_y columns.
+
+    Returns
+    -------
+    area : float
+        Area of convex hull around fixations
+
+    Notes
+    -----
+    Requires the shapely module to be installed
+
+    """
+    from shapely.geometry import MultiPoint
+    xy_tuple = [tuple(x) for _, x in fixations[["fix_x", "fix_y"]].iterrows()]
+    return MultiPoint(xy_tuple).convex_hull.area
+
+def convex_hull_envelope(fixations):
+    """Envelope of convex hull around all fixation points.
+
+    Parameters
+    ----------
+    fixations : pandas DataFrame
+        DataFrame with one row per fixation. Requires fix_x and fix_y columns.
+
+    Returns
+    -------
+    env : tuple of float
+        Envelope bounds of convex hull around fixations (x1, y1, x2, y2)
+
+    Notes
+    -----
+    Requires the shapely module to be installed
+
+    """
+    from shapely.geometry import MultiPoint
+    xy_tuple = [tuple(x) for _, x in fixations[["fix_x", "fix_y"]].iterrows()]
+    return MultiPoint(xy_tuple).envelope.bounds
+
+def transition_density(trans_matrix, threshold=1):
+    num_cells = reduce(operator.mul, trans_matrix.shape, 1)
+    return sum(trans_matrix.flatten() >= threshold) / float(num_cells)
+
+def spatial_density(fixations, grid_bbox=None, num_cols=10,
+        num_rows=10, threshold=1, return_counts=False):
     if grid_bbox is None:
-        min_x, min_y = np.floor(fixations.fix_x.min()), np.floor(fixations.fix_y.min())
-        max_x, max_y = np.ceil(fixations.fix_x.max()), np.ceil(fixations.fix_y.max())
+        # Compute bounding box from fixations positions
+        min_x, min_y = np.floor(fixations.fix_x.min()),\
+            np.floor(fixations.fix_y.min())
+        max_x, max_y = np.ceil(fixations.fix_x.max()),\
+            np.ceil(fixations.fix_y.max())
         grid_bbox = (min_x, min_y, max_x - min_x, max_y - min_y)
-        print grid_bbox
-
+    elif isinstance(grid_bbox, pandas.DataFrame):
+        # Use first row of DataFrame
+        grid_bbox = list(grid_bbox[["x", "y", "width", "height"]]\
+                .values[0])
+ 
+    # Compute cell size
     grid_width, grid_height = grid_bbox[2], grid_bbox[3]
     h_size, v_size = grid_width / float(num_cols), grid_height / float(num_rows)
 
+    # Count number of fixations in each cell
     counts = np.zeros(shape=(num_cols, num_rows))
     for x, y in fixations[["fix_x", "fix_y"]].values:
+        # Calculate which cell the fixation was inside
         grid_x = int((x - grid_bbox[0]) / h_size)
         grid_y = int((y - grid_bbox[1]) / v_size)
         if (0 <= grid_x < num_cols) and (0 <= grid_y < num_rows):
             counts[grid_x, grid_y] += 1
 
+    # Compute density -- number of cells with fixations >= threshold
     density = sum(counts.flatten() >= threshold) / float(num_cols * num_rows)
-    return density, counts
+    if return_counts:
+        # Return both spatial density and count matrix
+        return density, counts
+    else:
+        # Return just the spatial density
+        return density
+
+def rolling_window(frame, fun, window_size_ms, step_ms):
+    start, end = 0, window_size_ms
+    if not isinstance(fun, dict):
+        fun = { "value" : fun }
+
+    values = { k : [] for k, v in fun.iteritems() }
+    times = []
+    while start < frame.end_ms.max():
+        times.append(start + (window_size_ms / 2))
+        win_frame = frame[
+                ((frame.start_ms >= start) & (frame.start_ms < end)) |
+                ((frame.end_ms >= start) & (frame.end_ms < end))]
+
+        for k, f in fun.iteritems():
+            values[k].append(f(win_frame))
+
+        start += step_ms
+        end += step_ms
+
+    df = pandas.DataFrame(values, index=times)
+    return df
+
+# }}}
+
+
+def percent_fixations_on_aoi(aoi_fixations):
+    num_fixes = fixations_per_aoi(aoi_fixations)
+    return num_fixes.groupby(level=0).apply(lambda f: f / float(f.sum()))
 
 def lines_by_fixation(fixations):
     # Group fixations by trial
@@ -253,5 +415,3 @@ def fixation_ms_proportion(aoi_fixations):
     ms_per_aoi = fixation_ms_per_aoi(aoi_fixations)
     total_ms = ms_per_aoi.groupby(level="kind").sum().astype(float)
     return ms_per_aoi.div(total_ms, level="kind")
-
-# }}}
