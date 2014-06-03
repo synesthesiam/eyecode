@@ -74,37 +74,63 @@ def trial_responses():
     """Timestamped text responses for all trials"""
     return __read_csv("trial_responses")
 
-def all_fixations():
+def all_fixations(exp_id=None, trial_id=None):
     """Hit-tested fixations for all trials"""
-    return __read_csv("all_fixations")
+    df = __read_csv("all_fixations")
+    if exp_id is not None:
+        df = df[df.exp_id == exp_id]
+    if trial_id is not None:
+        df = df[df.trial_id == trial_id]
+    return df
 
-def all_saccades():
+def all_saccades(exp_id=None, trial_id=None):
     """Saccades for all trials"""
-    return __read_csv("all_saccades")
+    df = __read_csv("all_saccades")
+    if exp_id is not None:
+        df = df[df.exp_id == exp_id]
+    if trial_id is not None:
+        df = df[df.trial_id == trial_id]
+    return df
 
-def line_fixations():
+def line_fixations(exp_id=None, trial_id=None):
     """Hit-tested fixations with numeric line column for all trials"""
-    return __read_csv("line_fixations")
+    df = __read_csv("line_fixations")
+    if exp_id is not None:
+        df = df[df.exp_id == exp_id]
+    if trial_id is not None:
+        df = df[df.trial_id == trial_id]
+    return df
 
-def raw_fixations():
+def raw_fixations(exp_id=None, trial_id=None):
     """Fixations without offset correction and hit testing"""
-    return __read_csv("raw_fixations")
+    df = __read_csv("raw_fixations")
+    if exp_id is not None:
+        df = df[df.exp_id == exp_id]
+    if trial_id is not None:
+        df = df[df.trial_id == trial_id]
+    return df
 
-def areas_of_interest():
+def areas_of_interest(exp_id=None, trial_id=None):
     """AOI rectangles for all trials"""
-    return __read_csv("aois")
+    df = __read_csv("aois")
+    if exp_id is not None:
+        df = df[df.exp_id == exp_id]
+    if trial_id is not None:
+        df = df[df.trial_id == trial_id]
+    return df
 
 def youtube_videos():
     """URLs for uploaded eye-tracking videos"""
     return __read_csv("youtube")
 
-def trial_screen_path(trial_id):
+def trial_screen_path(exp_id, trial_id):
     """Path to screenshot image for the given eye-tracking trial"""
-    return os.path.join(DATA_DIR, "screens", "{0}.png".format(trial_id))
+    return os.path.join(DATA_DIR, "screens", "{0}_{1}.png"\
+            .format(exp_id, trial_id))
 
-def trial_screen(trial_id):
+def trial_screen(exp_id, trial_id):
     """Screenshot image for the given eye-tracking trial"""
-    return Image.open(trial_screen_path(trial_id))
+    return Image.open(trial_screen_path(exp_id, trial_id))
 
 def program_code(base, version):
     """Lines of code for the given program base and version"""

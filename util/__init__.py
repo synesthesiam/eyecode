@@ -2,11 +2,23 @@ import numpy as np, functools as ft, itertools as it, pandas
 import sys, cStringIO, contextlib
 from grading import *
 
+def filter_trial(frame, exp_id, trial_id=None):
+    if trial_id is None:
+        return frame[frame.exp_id == exp_id]
+    else:
+        return frame[(frame.exp_id == exp_id) & (frame.trial_id == trial_id)]
+
 def filter_program(frame, base, version=None):
     if version is None:
         return frame[frame.base == base]
     else:
         return frame[(frame.base == base) & (frame.version == version)]
+
+def filter_aois(frame, kind, name=None):
+    if name is None:
+        return frame[frame.kind == kind]
+    else:
+        return frame[(frame.kind == kind) & (frame.name == name)]
 
 def comma_list_contains(s, list_str):
     return list_str.split(",").contains(s)
@@ -68,13 +80,11 @@ def make_heatmap(points, screen_size, point_size, sigma_denom=5.0):
     screen = np.zeros((screen_size[0] + point_size, screen_size[1] + point_size))
     kernel = gauss_kern((point_size, point_size), sigma=(point_size / sigma_denom))
     for pt in points:
-        x, y = pt[0] + point_radius, pt[1] + point_radius
-        x_start = x - point_radius
-        y_start = y - point_radius
-        x_end = x + point_radius
-        y_end = y + point_radius
-
-        screen[x_start:x_end, y_start:y_end] += kernel
+        x_start, y_start = pt[0], pt[1]
+        x_end, y_end = x_start + point_size, y_start + point_size
+        scr_slice = screen[x_start:x_end, y_start:y_end]
+        width, height = scr_slice.shape[0], scr_slice.shape[1]
+        screen[x_start:x_end, y_start:y_end] = scr_slice + kernel[:width, :height]
 
     screen = screen / screen.max()
     screen = screen[point_radius:-point_radius,

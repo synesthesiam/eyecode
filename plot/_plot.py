@@ -1,19 +1,23 @@
 import operator, itertools as it
 
 import numpy as np
+import scipy
+import matplotlib
 from matplotlib import pyplot, cm
-from matplotlib.ticker import MultipleLocator, FuncFormatter
+from matplotlib.ticker import MultipleLocator, FuncFormatter, FixedFormatter
+from matplotlib.colors import LinearSegmentedColormap
 from PIL import Image, ImageDraw, ImageEnhance
 from StringIO import StringIO
 
 from kelly_colors import kelly_colors
-from ..aoi import get_aoi_kinds, kind_to_col
-from ..util import contrast_color
+from ..aoi import get_aoi_kinds, kind_to_col, envelope, make_grid, hit_test, hit_point
+from ..util import contrast_color, significant, make_heatmap
+from ..stats import permute_correlation_matrix
 
 # AOI plots {{{
 
 def draw_rectangles(aoi_rectangles, screen_image, colors=None,
-        outline="black", alpha=0.5):
+        outline="black", alpha=0.5, color_func=None):
     """Draws AOI rectangles on to an image.
     
     Parameters
@@ -49,10 +53,14 @@ def draw_rectangles(aoi_rectangles, screen_image, colors=None,
         colors = kelly_colors
     colors = it.cycle(colors)
 
+    if color_func is None:
+        color_func = lambda k, n, li: colors.next()
+
+    row_cols = ["x", "y", "width", "height", "name", "local_id"]
     for kind, kind_rows in aoi_rectangles.groupby("kind"):
-        for x, y, w, h in kind_rows[["x", "y", "width", "height"]].values:
+        for x, y, w, h, name, local_id in kind_rows[row_cols].values:
             draw.rectangle([(x, y), (x + w - 1, y + h - 1)],
-                    fill=colors.next(), outline=outline)
+                    fill=color_func(kind, name, local_id), outline=outline)
 
     del draw
 
@@ -74,17 +82,21 @@ def aoi_transitions(trans_matrix, name_map=None,
     aoi.scanpath_from_fixations
     
     """
+    rows = np.arange(trans_matrix.shape[0])
+    cols = np.arange(trans_matrix.shape[1])
+
     if ax is None:
+        if figsize is None:
+            w, h = trans_matrix.shape[:2]
+            figsize = (w * 0.75, h * 0.5)
         pyplot.figure(figsize=figsize)
         ax = pyplot.axes()
 
     if cmap is None:
         cmap = cm.gist_gray_r
 
-    rows = np.arange(trans_matrix.shape[0])
-    cols = np.arange(trans_matrix.shape[1])
-
-    polys = ax.pcolor(trans_matrix, cmap=cmap, edgecolors="#000000", vmin=0, vmax=1)
+    polys = ax.pcolor(trans_matrix, cmap=cmap,
+            edgecolors="#000000", vmin=0, vmax=1)
     ax.set_title("AOI Transitions")
 
     # x-axis
@@ -308,9 +320,9 @@ def fix_circles(fixations, screen_image, radius_min=10, radius_max=35, fill="red
     # Blend circles on to screen image with alpha
     return Image.composite(poly_image, screen_image, poly_image)
 
-def highlight_code(code, lex=None, fmt=None, style="default",
-        font_name="Droid Sans Mono", font_size=19,
-        image_pad=10, line_pad=10, line_numbers=False):
+def highlight_code(code, lexer=None, formatter=None, filename=None,
+        style="default", font_name=None, font_size=19,
+        image_pad=10, line_pad=8, line_numbers=False):
     """Highlights Python code using Pygments.
     
     Parameters
@@ -352,19 +364,23 @@ def highlight_code(code, lex=None, fmt=None, style="default",
 
     import pygments
     from pygments import formatters, lexers
+    if lexer is None:
+        msg = "filename is required if no lexer is provided"
+        assert filename is not None, msg
+        lexer = pygments.lexers.guess_lexer_for_filename(filename, code)
 
     # Create lexer and formatter if not provided
-    lex = lex or lexers.get_lexer_by_name("python")
-    fmt = fmt or formatters.get_formatter_by_name("png",
-                                           style=style,
-                                           font_name=font_name,
-                                           font_size=font_size,
-                                           line_numbers=line_numbers,
-                                           image_pad=image_pad,
-                                           line_pad=line_pad)
+    formatter = formatter or formatters.get_formatter_by_name("png",
+            style=style, font_name=font_name,
+            font_size=font_size, line_numbers=line_numbers,
+            image_pad=image_pad, line_pad=line_pad)
 
     # Highlight code
-    png_data = pygments.highlight(code, lex, fmt)
+    if not isinstance(code, str):
+        # Convert to a single string
+        code = "\n".join([line.rstrip() for line in code])
+
+    png_data = pygments.highlight(code, lexer, formatter)
 
     # Convert to PIL Image
     code_image = Image.open(StringIO(png_data))
@@ -372,7 +388,7 @@ def highlight_code(code, lex=None, fmt=None, style="default",
 
 def line_code_image(line_fixes, code_image, num_lines, method="time",
         image_padding=10, image_dpi=120, bar_height=0.75, bar_mult=1.0,
-        width_inches=5, color=None, **kwargs):
+        width_inches=5, color=None, horiz_sep=0, **kwargs):
     """Plots fixation information as bars next to code lines.
     
     Parameters
@@ -415,6 +431,9 @@ def line_code_image(line_fixes, code_image, num_lines, method="time",
 
     color : str or None, optional
         Color of bars or None for automatic selection
+
+    horiz_sep : int, optional
+        Separation between bars and code image in pixels (default: 0)
 
     **kwargs : keyword arguments
         Arguments passed through to matplotlib barh function
@@ -473,18 +492,19 @@ def line_code_image(line_fixes, code_image, num_lines, method="time",
     plot_image = Image.open(plot_buffer)
     
     # Create combined image
-    master_image = Image.new("RGBA", (plot_image.size[0] + code_image.size[0], code_image.size[1]),
+    master_width = plot_image.size[0] + horiz_sep + code_image.size[0]
+    master_image = Image.new("RGBA", (master_width, code_image.size[1]),
                              (255, 255, 255, 255))
 
     # Paste bar plot (left) and code (right)
     master_image.paste(plot_image, (0, image_padding))
-    master_image.paste(code_image, (plot_image.size[0], 0))
-    
+    master_image.paste(code_image, (plot_image.size[0] + horiz_sep, 0))
+
     return master_image
 
 
-def fix_timeline(line_fixes, num_lines,
-        output_fixes=None, ax=None, figsize=None):
+def fix_timeline(line_fixes, num_lines, output_fixes=None,
+        ax=None, figsize=None, barebones=False):
     """Plots a timeline of line fixations by seconds.
 
     Parameters
@@ -537,16 +557,18 @@ def fix_timeline(line_fixes, num_lines,
         ax = pyplot.axes()
 
     ax.plot(sorted_times, sorted_lines, linewidth=2)
-    ax.scatter(sorted_times, sorted_lines, marker="o", alpha=0.5, color="red", s=50)
-    ax.grid()
-    ax.set_title("Fixations By Line")
+    if not barebones:
+        ax.scatter(sorted_times, sorted_lines, marker="o", alpha=0.5, color="red", s=50)
+        ax.grid()
+        ax.set_title("Fixations By Line")
     
     # Line 1 is at the top (output box is above it)
     if output_fixes is not None:
         lines = np.arange(0, num_lines + 1)
         ax.set_yticks(lines)
         ax.set_ylim(-0.5, num_lines + 0.5)
-        ax.set_yticklabels(["Output\nTextbox"] + [str(l) for l in lines[1:]])
+        if not barebones:
+            ax.set_yticklabels(["Output\nTextbox"] + [str(l) for l in lines[1:]])
 
         # Separate output box from other lines
         ax.axhline(0.5, color="black", linestyle="--", linewidth=2)
@@ -554,16 +576,25 @@ def fix_timeline(line_fixes, num_lines,
         lines = np.arange(1, num_lines + 1)
         ax.set_ylim(0.5, num_lines + 0.5)
         ax.set_yticks(lines)
-        ax.set_yticklabels(lines)
+        if not barebones:
+            ax.set_yticklabels(lines)
 
-    ax.set_ylabel("Line")
+    if not barebones:
+        ax.set_ylabel("Line")
     ax.invert_yaxis()
     
     # Show time in seconds instead of millis
     ax.xaxis.set_major_formatter(FuncFormatter(lambda x, pos: int(x / 1000)))
     ax.xaxis.set_major_locator(MultipleLocator(1000))
     ax.set_xlim(-500, max_time + 1000)
-    ax.set_xlabel("Time (seconds)")
+    if not barebones:
+        ax.set_xlabel("Time (seconds)")
+    else:
+        ax.set_frame_on(False)
+        ax.set_xticklabels([])
+        ax.set_xticks([])
+        ax.set_yticklabels([])
+        ax.set_yticks([])
     
     return ax
 
@@ -571,11 +602,14 @@ def fix_timeline(line_fixes, num_lines,
 
 # Metric plots {{{
 
-def rolling_metrics(results, columns, names=None, colors=None,
+def rolling_metrics(results, columns=None, names=None, colors=None,
         markersize=5, ax=None, figsize=None):
     from matplotlib.ticker import MultipleLocator, FormatStrFormatter, FuncFormatter
-    fig = None
 
+    if columns is None:
+        columns = [results.columns[0]]
+
+    fig = None
     if ax is None:
         fig = pyplot.figure(figsize=figsize)
         ax = pyplot.axes()
@@ -585,16 +619,19 @@ def rolling_metrics(results, columns, names=None, colors=None,
     axes = [ax] + [ax.twinx() for c in columns[1:]]
 
     if colors is None:
-        colors = kelly_colors
+        colors = ["r", "g", "b", "y", "purple", "orange", "black"]
     colors = it.cycle(colors)
 
     if names is None:
         names = columns
+    elif isinstance(names, str):
+        names = [names]
     
-    #fig.subplots_adjust(left=0, right=0.75)
-    #axes[2].spines['right'].set_position(('axes', 1.1))
-    #axes[2].set_frame_on(True)
-    #axes[2].patch.set_visible(False)
+    if len(columns) > 2:
+        fig.subplots_adjust(left=0, right=0.75)
+        axes[2].spines['right'].set_position(('axes', 1.1))
+        axes[2].set_frame_on(True)
+        axes[2].patch.set_visible(False)
     
     # Plot left y-axis
     color = next(colors)
@@ -611,9 +648,12 @@ def rolling_metrics(results, columns, names=None, colors=None,
         axes[1].set_ylabel(names[1], color=color)
         axes[1].tick_params(axis="y", colors=color)
     
-    #axes[2].plot(results.index, results.fcount, color="g", marker="^", markersize=markersize, label="Fix Count")
-    #axes[2].set_ylabel("Fixation Count", color="g")
-    #axes[2].tick_params(axis="y", colors="g")
+    if len(columns) > 2:
+        color = next(colors)
+        axes[2].plot(results.index, results[columns[2]], color=color, marker="^",
+                markersize=markersize, label=names[2])
+        axes[2].set_ylabel(names[2], color=color)
+        axes[2].tick_params(axis="y", colors=color)
     
     # Adjust x-axis to seconds
     ax.set_xlabel("Time (sec)")
@@ -733,3 +773,252 @@ def draw_code(code, font_path=None, font_size=18,
     return image
 
 # }}}
+
+
+def correlation_matrix(frame, cols, ax=None, figsize=None,
+        label_size="small", alpha=0.05, label_threshold=0.2,
+        add_legend=True, method="spearman"):
+    if ax is None:
+        fig, ax = pyplot.subplots(1, 1, figsize=figsize)
+
+    title = ""
+    if isinstance(method, str):
+        title = method.capitalize() + " "
+
+    ax.set_title("{0}Correlation Matrix ({1} columns)".format(title, len(cols)))
+
+    corr2d, sig2d = permute_correlation_matrix(frame[cols], method=method)
+    text2d = np.empty(shape=(len(cols), len(cols)), dtype=object)
+    num_steps = 100
+
+    for i, col1 in enumerate(cols):
+        for j, col2 in enumerate(cols):
+            if i != j:
+                r = corr2d[i, j]
+                corr2d[i, j] = num_steps + (num_steps * r)
+                if sig2d[i, j]:
+                    text2d[i, j] = "{0:.0f}".format(abs(r) * 100)
+                    if r < 0:
+                        text2d[i, j] = "({0})".format(text2d[i, j])
+                else:
+                    text2d[i, j] = ""
+            else:
+                corr2d[i, j] = np.nan
+
+    cdict = { "blue" : [(0.0, 0.0, 0.0),
+                        (0.5, 1.0, 1.0),
+                        (1.0, 0.0, 0.0)],
+
+              "red"    : [(0.0, 1.0, 1.0),
+                          (0.5, 1.0, 1.0),
+                          (1.0, 0.0, 0.0)],
+              
+              "green" : [(0.0, 0.0, 0.0),
+                         (0.5, 1.0, 1.0),
+                         (1.0, 1.0, 1.0)]}
+
+    cmap = LinearSegmentedColormap("heat", cdict, N=(num_steps * 2))
+    masked = np.ma.masked_where(np.isnan(corr2d), corr2d)
+    ax.set_axis_bgcolor("#CCCCCC")
+    meshes = ax.pcolor(masked, cmap=cmap, edgecolors="#000000", vmin=0, vmax=(num_steps * 2))
+    
+    for i in range(len(cols)):
+        for j in range(len(cols)):
+            if (i != j) and text2d[i, j] is not None:
+                pyplot.text(i + 0.5, j + 0.5, text2d[i, j],
+                         horizontalalignment="center",
+                         verticalalignment="center",
+                         size=label_size)
+
+    fig = ax.figure
+    if add_legend:
+        cb = fig.colorbar(meshes, ticks=[0, num_steps, num_steps * 2],
+                          format=pyplot.FixedFormatter(["-1", "0", "1"]))
+
+        cb.set_label("{0}Correlation (x100)".format(title))
+
+    # Set exact limits
+    ax.set_xlim((0, len(cols)))
+    ax.set_ylim((0, len(cols)))
+
+    # Label columns
+    loc = pyplot.FixedLocator([0.5 + x for x in range(len(cols))])
+    ax.xaxis.set_major_locator(loc)
+    ax.yaxis.set_major_locator(loc)
+
+    tic = pyplot.FixedFormatter(cols)
+    ax.xaxis.set_major_formatter(tic)
+    ax.yaxis.set_major_formatter(tic)
+
+    pyplot.xticks(rotation=90)
+    fig.tight_layout()
+
+    return ax
+
+def super_code_image(fixes, line_fixes, num_lines, screen_img, trial,
+        trial_aois, cmap=pyplot.cm.OrRd, syntax_alpha=0.7,
+        grid_cell_size=(30, 30), code_padding=5):
+
+    # Crop out code image
+    line_aois = trial_aois[(trial_aois.kind == "line")]
+    env = envelope(line_aois, code_padding).irow(0)
+    crop_rect = [env["x"], env["y"], env["x"] + env["width"], env["y"] + env["height"]]
+
+    # Hit test against grid AOIs
+    #fixes = hit_test(fixes, grid_aois, hit_fun=hit_point)
+    grid_aois = trial_aois[(trial_aois.kind == "code-grid")]
+    grid_fixes = fixes.dropna(subset=["aoi_code-grid"])
+    grid_counts = grid_fixes.groupby("aoi_code-grid").duration_ms.sum()
+    max_grid_count = float(max(grid_counts))
+
+    def color_grid(kind, name, local_id):
+        rel_count = grid_counts.get(name, default=0) / max_grid_count
+        return matplotlib.colors.rgb2hex(cmap(rel_count))
+
+    # Create syntax-based image
+    code_box = trial_aois[(trial_aois.kind == "interface") &
+                          (trial_aois.name == "code box")].irow(0)
+    aoi_img = draw_rectangles(grid_aois, screen_img, color_func=color_grid,
+            alpha=syntax_alpha, outline=None)
+    code_img = aoi_img.crop(crop_rect)
+
+    # Compute line colors based on their associated block fixation times
+    block_fixes = fixes.dropna(subset=["aoi_block"])
+    block_counts = block_fixes.groupby("hit_id_block").duration_ms.sum()
+    block_aois = trial_aois[(trial_aois.kind == "block")]
+    max_block_count = float(max(block_counts))
+
+    colors = ["w"] * num_lines
+    for idx, row in line_aois.iterrows():
+        # Compute associated block for line
+        line_num = int(row["name"].split(" ")[1])
+        line_block = block_aois[(row["y"] >= block_aois["y"]) &
+                (row["y"] < (block_aois["y"] + block_aois["height"]))]
+
+        if len(line_block) > 0:
+            # Extract fixation counts for this block and compute color
+            block_id = line_block.irow(0)["local_id"]
+            rel_count = block_counts.get(block_id, default=0) / max_block_count
+            colors[line_num - 1] = matplotlib.colors.rgb2hex(cmap(rel_count))
+        
+    # Create final image combining lines, blocks, and syntax fixation counts
+    return line_code_image(line_fixes, code_img, num_lines, color=colors,
+            image_padding=3, bar_height=0.85, bar_mult=1.001, horiz_sep=5,
+            method="time")
+
+
+def fixation_heatmap(fixations, screen_image, alpha=0.7,
+                     dot_size=200, cmap=None, dpi=90):
+    points = fixations[["fix_x", "fix_y"]].values
+    heatmap_data = make_heatmap(points, screen_image.size, dot_size)
+
+    width, height = screen_image.size
+    width_inches = width / float(dpi)
+    height_inches = height / float(dpi)
+
+    fig = pyplot.figure(figsize=(width_inches, height_inches), dpi=dpi, frameon=False)
+    ax = pyplot.Axes(fig, [0, 0, 1, 1])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+
+    if cmap is None:
+        cmap = pyplot.cm.get_cmap("jet")
+        cmap._init()
+        alphas = np.abs(np.linspace(-1.0, 1.0, cmap.N))
+        cmap._lut[:-3, -1] = alphas
+
+    ax.imshow(heatmap_data.T, interpolation="none", cmap=cmap)
+    plot_buffer = StringIO()
+    fig.savefig(plot_buffer, format="png", dpi=dpi)
+    pyplot.close(fig)
+    plot_buffer.pos = 0
+    heatmap_image = Image.open(plot_buffer)
+
+    heatmap_alpha = heatmap_image.split()[3]
+    heatmap_image.putalpha(ImageEnhance.Brightness(heatmap_alpha).enhance(alpha))
+
+    return Image.composite(heatmap_image, screen_image, heatmap_image)
+
+#def correlation_matrix(frame, cols, ax=None, figsize=None,
+        #label_size="small", alpha=0.05, label_threshold=0.2,
+        #add_legend=True, method="spearman"):
+    #if ax is None:
+        #fig, ax = pyplot.subplots(1, 1, figsize=figsize)
+
+    #title = ""
+    #if isinstance(method, str):
+        #title = method.capitalize()
+        #if method == "pearson":
+            #method = scipy.stats.pearsonr
+        #elif method == "spearman":
+            #method = scipy.stats.spearmanr
+        #else:
+            #raise ValueError("method must be pearson or spearman")
+
+    #ax.set_title("{0} Correlation Matrix ({1} columns)".format(title, len(cols)))
+
+    #corr2d = np.zeros(shape=(len(cols), len(cols)))
+    #sig2d = np.empty(shape=(len(cols), len(cols)), dtype=object)
+    #num_steps = 100
+
+    #for i, col1 in enumerate(cols):
+        #for j, col2 in enumerate(cols):
+            #r, p = method(frame[col1], frame[col2])
+            #corr2d[i, j] = num_steps + (num_steps * r) if i != j else np.nan
+            #if (col1 != col2) and p < alpha:
+                #if abs(r) >= label_threshold:
+                    #sig2d[i, j] = "{0:.0f}".format(abs(r) * 100)
+                    #if r < 0:
+                        #sig2d[i, j] = "({0})".format(sig2d[i, j])
+                ##else:
+                    ##sig2d[i, j] = significant(p)
+
+    #cdict = { "blue" : [(0.0, 0.0, 0.0),
+                        #(0.5, 1.0, 1.0),
+                        #(1.0, 0.0, 0.0)],
+
+              #"red"    : [(0.0, 1.0, 1.0),
+                          #(0.5, 1.0, 1.0),
+                          #(1.0, 0.0, 0.0)],
+              
+              #"green" : [(0.0, 0.0, 0.0),
+                         #(0.5, 1.0, 1.0),
+                         #(1.0, 1.0, 1.0)]}
+
+    #cmap = LinearSegmentedColormap("heat", cdict, N=(num_steps * 2))
+    #masked = np.ma.masked_where(np.isnan(corr2d), corr2d)
+    #ax.set_axis_bgcolor("#CCCCCC")
+    #meshes = ax.pcolor(masked, cmap=cmap, edgecolors="#000000", vmin=0, vmax=(num_steps * 2))
+    
+    #for i in range(len(cols)):
+        #for j in range(len(cols)):
+            #if (i != j) and sig2d[i, j] is not None:
+                #pyplot.text(i + 0.5, j + 0.5, sig2d[i, j],
+                         #horizontalalignment="center",
+                         #verticalalignment="center",
+                         #size=label_size)
+
+    #fig = ax.figure
+    #if add_legend:
+        #cb = fig.colorbar(meshes, ticks=[0, num_steps, num_steps * 2],
+                          #format=pyplot.FixedFormatter(["-1", "0", "1"]))
+
+        #cb.set_label("{0} Correlation (x100)".format(title))
+
+    ## Set exact limits
+    #ax.set_xlim((0, len(cols)))
+    #ax.set_ylim((0, len(cols)))
+
+    ## Label columns
+    #loc = pyplot.FixedLocator([0.5 + x for x in range(len(cols))])
+    #ax.xaxis.set_major_locator(loc)
+    #ax.yaxis.set_major_locator(loc)
+
+    #tic = pyplot.FixedFormatter(cols)
+    #ax.xaxis.set_major_formatter(tic)
+    #ax.yaxis.set_major_formatter(tic)
+
+    #pyplot.xticks(rotation=90)
+    #fig.tight_layout()
+
+    #return ax

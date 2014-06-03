@@ -186,10 +186,20 @@ def add_bbox(aois, bbox, kind, name):
         "height" : bbox[3]
     }, ignore_index=True)
 
-def combine_aois(aois, kind, names, new_kind, new_name):
+def combine_aois(aois, kind, names=None, new_kind=None, new_name=None):
     """Adds a new AOI whose bounding box envelopes the given kind/names.
     """
-    filtered_aois = aois[(aois.kind == kind) & (aois.name.isin(names))]
+    filtered_aois = aois[(aois.kind == kind)]
+    if names is not None:
+        filtered_aois = filtered_aois[aois.name.isin(names)]
+    else:
+        names = sorted(aois.name.unique())
+
+    if new_kind is None:
+        new_kind = "{0}-combined".format(kind)
+    if new_name is None:
+        new_name = " ".join(names)
+
     return pandas.concat(
             [aois, envelope(filtered_aois, kind=new_kind, name=new_name)],
             ignore_index=False)
@@ -326,11 +336,11 @@ def scanpath_from_fixations(fixations, aoi_names=None, mixed=False,
     """
     if aoi_names is None:
         kinds = get_aoi_kinds(fixations) 
-    if isinstance(aoi_names, str):
+    elif isinstance(aoi_names, str):
         kinds = [aoi_names]
         aoi_names = { aoi_names: [] }
-    elif isinstance(aoi_names, list) or isinstance(aoi_name, tuple):
-        kinds = aoi_kinds
+    elif isinstance(aoi_names, list) or isinstance(aoi_names, tuple):
+        kinds = aoi_names
         aoi_names = { n : [] for n in aoi_names }
     else:
         kinds = aoi_names.keys()
@@ -348,7 +358,7 @@ def scanpath_from_fixations(fixations, aoi_names=None, mixed=False,
 
     # Create dictionary of aoi names
     for kind, names in aoi_names.iteritems():
-        if names is None or len(names) == 0:
+        if not isinstance(names, list) or len(names) == 0:
             # Fill in missing aoi names
             col = kind_to_col(kind)
             aoi_names[kind] = sorted(aoi_fixes[kind].unique())
@@ -367,7 +377,7 @@ def scanpath_from_fixations(fixations, aoi_names=None, mixed=False,
     # Verify that there are enough unique names
     if mixed:
         total_names = len(name_map.values())
-        unique_names = len(set(name_map.values))
+        unique_names = len(set(name_map.values()))
         assert total_names >= unique_names, "AOI names overlap between kinds."\
                 " You must specify a name map or set mixed to False."
 
@@ -535,7 +545,7 @@ def transition_matrix(scanpath, shape=None, norm=True):
     """
     aoi_idx = { n : i for i, n in enumerate(sorted(scanpath.unique())) }
     if shape is None:
-        shape = (len(aoi_idx) + 1, len(aoi_idx) + 1)
+        shape = (len(aoi_idx), len(aoi_idx))
 
     trans_counts = np.zeros(shape)
     for i, j in zip(scanpath, scanpath[1:]):
@@ -683,7 +693,7 @@ def find_rectangles(screen_image, black_thresh=255, white_row_thresh=3,
 
 def code_to_aois(code, lexer=None, filename=None,
         font_size=(11, 18), line_offset=5,
-        padding=(2, 5), token_kind="token",
+        padding=(2, 5), offset=(0, 0), token_kind="token",
         line_kind="line"):
     """
     Creates area of interest (AOI) rectangles from code using Pygments. AOIs
@@ -737,12 +747,18 @@ def code_to_aois(code, lexer=None, filename=None,
         assert filename is not None, msg
         lexer = pygments.lexers.guess_lexer_for_filename(filename, code)
 
+    if not isinstance(code, str):
+        code = "\n".join([line.rstrip() for line in code])
+
     # Convert to 2-d tokens and then to monospace AOIs
     tokens = lexer.get_tokens_unprocessed(code)
     tokens2d = tokens_to_2d(tokens)
     aois = tokens2d_monospace_aois(tokens2d, font_size=font_size,
             line_offset=line_offset, padding=padding,
             token_kind=token_kind, line_kind=line_kind)
+
+    aois["x"] += offset[0]
+    aois["y"] += offset[1]
 
     return aois
 
@@ -830,6 +846,7 @@ def tokens2d_monospace_aois(tokens2d, font_size=(11, 18),
         aoi_width = len(text) * font_size[0] + padding[0]
         aoi_height = font_size[1] + padding[1]
         aoi_kind = token_kind
+        category = get_token_category(t_kind)
         
         # Automatically generate AOI names based on token kind (e.g., Keyword
         # 1, Keyword 2).
@@ -839,9 +856,9 @@ def tokens2d_monospace_aois(tokens2d, font_size=(11, 18),
         kind_counts[t_kind] += 1
         aoi_name = "{0} {1}".format(t_kind, kind_counts[t_kind])
         rows.append([aoi_x, aoi_y, aoi_width, aoi_height,
-                     aoi_kind, aoi_name])
+                     aoi_kind, aoi_name, text, category])
         
-    cols = ["x", "y", "width", "height", "kind", "name"]
+    cols = ["x", "y", "width", "height", "kind", "name", "text", "category"]
     tokens_df = pandas.DataFrame(rows, columns=cols)
     
     # Create line AOIs
@@ -855,13 +872,35 @@ def tokens2d_monospace_aois(tokens2d, font_size=(11, 18),
         max_x = frame.irow(frame.x.argmax())
         width = max_x["x"] + max_x["width"]
         height = font_size[1] + padding[1]
+        line_text = " ".join(frame.sort("x").text.values)
         rows.append([frame["x"].min(), y,
                      width, height, line_kind,
-                     "line {0}".format(line_idx + 1)])
+                     "line {0}".format(line_idx + 1),
+                     line_text, np.NaN])
         
     # Combine line and token AOIs for final DataFrame
     lines_df = pandas.DataFrame(rows, columns=cols)
     return pandas.concat([tokens_df, lines_df], ignore_index=True)
+
+def get_token_category(token_kind):
+    import pygments
+    import pygments.token
+    from pygments.token import Token
+
+    if token_kind == Token.Name:
+        return "identifier"
+    elif token_kind == Token.Operator:
+        return "operator"
+    elif token_kind == Token.Text:
+        return "text"
+    elif token_kind == Token.Keyword:
+        return "keyword"
+    elif token_kind == Token.Literal.Number.Integer:
+        return "integer"
+    elif token_kind == Token.Literal.String:
+        return "string"
+    else:
+        return "unknown"
 
 def make_grid(rows, cols, names, width=100, height=None):
     """Creates a grid of equally-sized AOIs rectangles."""
@@ -989,6 +1028,35 @@ def make_code_aois_from_files(code_paths, **kwargs):
 
     return aois_df
 
+def make_grid(x, y, width, height, num_horiz=10, num_vert=10,
+              aoi_width=None, aoi_height=None, kind="grid",
+              name_fun=None, local_id_fun=None):
+    grid_aois = []
+    if aoi_width is None:
+        aoi_width = width / num_horiz
+        aoi_height = height / num_vert
+    else:
+        num_horiz = int(np.ceil(width / float(aoi_width)))
+        num_vert = int(np.ceil(height / float(aoi_height)))
+    
+    if name_fun is None:
+        name_fun = lambda r, c: "cell {0},{1}".format(r, c)
+        
+    if local_id_fun is None:
+        local_id_fun = name_fun
+        
+    aoi_y = y
+    for row in range(num_vert):        
+        aoi_x = x
+        for col in range(num_horiz):
+            name = name_fun(row, col)
+            local_id = local_id_fun(row, col)
+            grid_aois.append([aoi_x, aoi_y, aoi_width, aoi_height, kind, name, local_id])
+            aoi_x += aoi_width
+        aoi_y += aoi_height
+    
+    return pandas.DataFrame(grid_aois, columns=["x", "y", "width", "height", "kind", "name", "local_id"])
+
 # }}}
 
 # Hit Testing {{{
@@ -1099,6 +1167,8 @@ def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle,
             "y"    : 0
         }, index=[0])
 
+    add_offset_kind = not ("offset_kind" in fixations.columns)
+
     # Hit test all fixations
     for _, fix in fixations.iterrows():
         for _, offset in offsets.iterrows():
@@ -1109,7 +1179,9 @@ def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle,
             fix_y = fix["fix_y"] + offset["y"]
             fix_pt = Point(fix_x, fix_y)
 
-            row = list(fix.values) + [offset_kind]
+            row = list(fix.values)
+            if add_offset_kind:
+                row += [offset_kind]
 
             # Test AOIs in groups (no overlap within a group is assumed)
             for kind in aoi_kinds:
@@ -1122,7 +1194,9 @@ def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle,
 
             output_rows.append(row)
 
-    cols = list(fixations.columns) + ["offset_kind"]
+    cols = list(fixations.columns)
+    if add_offset_kind:
+        cols += ["offset_kind"]
 
     # Add AOI hit columns
     cols += kinds_to_cols(aoi_kinds)

@@ -75,9 +75,9 @@ def feature_importances(importances, ax=None, figsize=None):
         ax = pyplot.axes()
 
     importances = importances.sort("importance", ascending=True)
-    colors = ["g" if corr > 0 else "r" for corr in importances["label_corr"]]
+    #colors = ["g" if corr > 0 else "r" for corr in importances["label_corr"]]
     y = np.arange(len(importances))
-    ax.barh(y, importances.importance.values, color=colors, ecolor="black",
+    ax.barh(y, importances.importance.values, color=kelly_colors, ecolor="black",
             xerr=importances.importance_std.values, align="center")
 
     max_i = importances.importance.argmax()
@@ -111,7 +111,7 @@ def column_distributions(responses, column, xlabel=None, title_prefix=None,
 
     if axes is None:
         if figsize is None:
-            figsize = (num_cols * 6, 5)
+            figsize = (num_cols * 4.5, 4.5)
         fig, axes = pyplot.subplots(nrows=1, ncols=num_cols, figsize=figsize)
 
     assert len(axes) >= num_cols, "Not enough axes"
@@ -156,6 +156,11 @@ def grade_distributions(responses, **kwargs):
     return column_distributions(responses, "grade_value",
             title_prefix="Trial Grades",
             xlabel="Grade", xlim=(0, 10), **kwargs)
+
+def output_dist_distributions(responses, col="correct_dist_norm", **kwargs):
+    return column_distributions(responses, col,
+            title_prefix="Norm. Output Distance",
+            xlabel="Output Distance", xlim=(0, 1), **kwargs)
 
 def duration_distributions(responses, log=False, **kwargs):
     resp_copy = responses[["version", "duration_ms"]]
@@ -311,6 +316,31 @@ def grades_by_base(responses, axes=None, figsize=None, colors=kelly_colors):
         ax.set_title("{0}, {1} trials".format(base, len(grades)))
         ax.set_xlabel("Grade")
         ax.set_xlim(0, 10)
+
+    if tight:
+        fig = axes[0].figure
+        fig.tight_layout()
+        fig.subplots_adjust(top=0.90, hspace=0.25)
+
+    return axes
+
+def output_dists_by_base(responses, col="perfect_dist_norm",
+        axes=None, figsize=None, colors=kelly_colors):
+    tight = False
+    bases = sorted(responses.base.unique())
+
+    if axes is None:
+        fig, _ = pyplot.subplots(nrows=2, ncols=5, figsize=figsize)
+        fig.suptitle("Output Distance Distributions by Program")
+        axes = fig.axes
+        tight = True
+
+    for ax, base, color in zip(axes, bases, it.cycle(colors)):
+        dists = responses[responses.base == base][col]
+        dists.hist(ax=ax, color=color)
+        ax.set_title("{0}, {1} trials".format(base, len(dists)))
+        ax.set_xlabel("Output Dist.")
+        ax.set_xlim(0, 1)
 
     if tight:
         fig = axes[0].figure
@@ -814,7 +844,8 @@ def fit_coefficients(fit, ax=None, figsize=None, skip_intercept=False):
 
     return ax
 
-def fit_coefficients_base(fit, ax=None, figsize=None, intercept=False):
+def fit_coefficients_base(fit, ax=None, figsize=None, intercept=False,
+        color_offset=0):
     if ax is None:
         pyplot.figure(figsize=figsize)
         ax = pyplot.axes()
@@ -827,7 +858,8 @@ def fit_coefficients_base(fit, ax=None, figsize=None, intercept=False):
         means, err = means[1:], err[1:]
         names = names[1:]
 
-    ax = means.plot(kind="bar", yerr=err, error_kw={ "ecolor": "black"}, color=kelly_colors)
+    ax = means.plot(kind="bar", yerr=err, error_kw={ "ecolor": "black"},
+            color=kelly_colors[color_offset:])
     ax.set_title("Binomial Coefficients for Correct Grade by Program")
     ax.set_ylabel("Binomial Coefficients (95% CI)")
     ax.set_xlabel("Program Base")

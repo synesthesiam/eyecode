@@ -5,6 +5,12 @@ from ..aoi import get_aoi_columns, get_aoi_kinds, kind_to_col, kinds_to_cols
 
 # Fixation Metrics {{{
 
+def fixation_count(fixes):
+    return len(fixes)
+
+def avg_fixation_duration(fixes):
+    return fixes["duration_ms"].mean()
+
 def fixes_per_trial(fixes_df):
     """Number of fixations by trial.
     

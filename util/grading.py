@@ -3,6 +3,9 @@ from io import StringIO
 FORMAT_CHARS = ['[', ']', ',', ' ', '\n', '"', '\'']
 TABLE = dict.fromkeys(map(ord, FORMAT_CHARS), None)
 
+def correct_string(s):
+    return unicode(s).translate(TABLE).lower()
+
 def matching_strings(s):
     matching = [s]
 

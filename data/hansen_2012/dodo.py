@@ -3,9 +3,10 @@ import sys, os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 
 import gzip, pandas, json
-import eyecode.aoi, eyecode.util
+import eyecode.aoi, eyecode.util, eyecode.metrics
 import numpy as np
 import scipy.spatial
+import nltk.metrics
 from lxml import etree
 from glob import glob
 from collections import defaultdict
@@ -13,6 +14,7 @@ from datetime import datetime
 from time import mktime
 
 TIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+GRID_AOI_SIZE = (30, 30)
 xml_paths = glob(os.path.join("xml", "*.xml.gz"))
 code_paths = glob(os.path.join("programs", "*.py"))
 
@@ -66,6 +68,7 @@ def task_raw_fixations():
 def task_aois():
     def make_aois():
         output_rows = []
+        base_versions = {}
 
         # Experiments
         for path in xml_paths:
@@ -76,17 +79,58 @@ def task_aois():
             # Trials
             for trial in exp.xpath(".//trial"):
                 trial_id = int(trial.attrib["id"])
+                code_box_aoi = trial.xpath("./areas-of-interest//aoi[@kind='interface' and @name='code box']")[0]
+                code_x      = int(code_box_aoi.attrib["x"])
+                code_y      = int(code_box_aoi.attrib["y"])
+                code_width  = int(code_box_aoi.attrib["width"])
+                code_height = int(code_box_aoi.attrib["height"])
 
                 for aoi in trial.xpath("./areas-of-interest//aoi"):
+                    aoi_x = int(aoi.attrib["x"])
+                    aoi_y = int(aoi.attrib["y"])
+                    aoi_id = "{0},{1}".format(aoi_x - code_x, aoi_y - code_y)
+
                     output_rows.append([
                         exp_id, trial_id,
                         aoi.attrib["kind"], aoi.attrib["name"],
-                        aoi.attrib["x"], aoi.attrib["y"],
-                        aoi.attrib["width"], aoi.attrib["height"]
+                        aoi_x, aoi_y,
+                        int(aoi.attrib["width"]), int(aoi.attrib["height"]),
+                        aoi_id
                     ])
 
+                # Cache base/version for later
+                base_versions[(exp_id, trial_id)] = (trial.attrib["base"], trial.attrib["version"])
+
         aois_df = pandas.DataFrame(output_rows, columns=("exp_id", "trial_id",
-            "kind", "name", "x", "y", "width", "height"))
+            "kind", "name", "x", "y", "width", "height", "local_id"))
+
+        # Add program specific AOIs
+        new_aois = []
+        for (exp_id, trial_id), t_aois in aois_df.groupby(["exp_id", "trial_id"]):
+            line_aois = eyecode.util.filter_aois(t_aois, "line")
+            line_env = eyecode.aoi.envelope(line_aois).irow(0)
+
+            # Create grid-based AOIs using line AOIs
+            grid_aois = eyecode.aoi.make_grid(line_env["x"], line_env["y"],
+                    line_env["width"], line_env["height"],
+                    aoi_width=GRID_AOI_SIZE[0], aoi_height=GRID_AOI_SIZE[1],
+                    kind="code-grid")
+            grid_aois["exp_id"] = exp_id
+            grid_aois["trial_id"] = trial_id
+            new_aois.append(grid_aois)
+
+            base, version = base_versions[(exp_id, trial_id)]
+            if base == "counting":
+                num_list_aois = t_aois[t_aois.local_id.isin(["126,-2", "294,-2"])]
+                num_list = eyecode.aoi.envelope(num_list_aois, kind="syntax-meta", name="number-list")
+                num_list["exp_id"] = exp_id
+                num_list["trial_id"] = trial_id
+                num_list["local_id"] = "126,-2"
+                new_aois.append(num_list)
+
+        # Append new AOIs
+        if len(new_aois) > 0:
+            aois_df = pandas.concat([aois_df] + new_aois, ignore_index=True)
 
         with gzip.open("aois.csv.gz", "w") as out_file:
             aois_df.to_csv(out_file, index=False)
@@ -102,10 +146,10 @@ def task_aois():
 def task_all_fixations():
     def make_polygon(aoi):
         from shapely.geometry import box
-        x = int(aoi.attrib["x"])
-        y = int(aoi.attrib["y"])
-        width = int(aoi.attrib["width"])
-        height = int(aoi.attrib["height"])
+        x = aoi["x"]
+        y = aoi["y"]
+        width = aoi["width"]
+        height = aoi["height"]
         return box(x, y, x + width, y + height)
 
     def make_all():
@@ -114,7 +158,8 @@ def task_all_fixations():
         #hit_kinds = { "point" : eyecode.aoi.hit_point, "circle" : eyecode.aoi.hit_circle }
         hit_kinds = { "circle" : eyecode.aoi.hit_circle }
         hit_radius = 20
-        aoi_kinds = ["interface", "line", "syntax", "block"]
+        aoi_kinds = ["interface", "line", "syntax", "block", "code-grid"]
+        aois = pandas.read_csv(gzip.open("aois.csv.gz", "r"))
 
         # Experiments
         for path in xml_paths:
@@ -127,12 +172,20 @@ def task_all_fixations():
                 trial_id = int(trial.attrib["id"])
                 offsets = trial.xpath(".//offset")
 
-                aois = [a for a in trial.xpath(".//aoi")]
-                aoi_groups = defaultdict(dict)
+                # Extract AOIs for this trial
+                t_aois = eyecode.util.filter_trial(aois, exp_id, trial_id)
+                code_box_aoi = t_aois[(t_aois.kind == "interface") &
+                        (t_aois.name == "code box")].irow(0)
                 
-                for aoi in aois:
-                    aoi_kind = aoi.attrib["kind"]
-                    aoi_groups[aoi_kind][aoi] = make_polygon(aoi)
+                assert code_box_aoi is not None, "code box AOI not found"
+                code_x = code_box_aoi["x"]
+                code_y = code_box_aoi["y"]
+
+                # Group AOIs by kind and create polygons
+                aoi_groups = defaultdict(dict)
+                for idx, aoi in t_aois.iterrows():
+                    aoi_kind = aoi["kind"]
+                    aoi_groups[aoi_kind][idx] = make_polygon(aoi)
 
                 # Hit test fixations
                 fixes = trial.xpath(".//fixation")
@@ -150,33 +203,44 @@ def task_all_fixations():
                             fix_x = int(fix.attrib["x"]) + offset_x
                             fix_y = int(fix.attrib["y"]) + offset_y
                             fix_pt = Point(fix_x, fix_y)
+                            pupil_left = float(fix.attrib["pupil_left"])
+                            pupil_right = float(fix.attrib["pupil_right"])
 
                             hit_names = []
+                            hit_ids = []
 
                             # Do hit testing by AOI group to avoid overlapping of AOIs
                             for aoi_kind in aoi_kinds:
                                 hit_name = ""
+                                hit_id = ""
 
                                 if aoi_kind in aoi_groups:
                                     aoi_polys = aoi_groups[aoi_kind]
-                                    hit_aoi = hit_fun(fix_pt, aoi_polys, radius=hit_radius)
-                                    if hit_aoi is not None:
-                                        hit_name = hit_aoi.attrib["name"]                                        
+                                    hit_idx = hit_fun(fix_pt, aoi_polys, radius=hit_radius)
+                                    if hit_idx is not None:
+                                        hit_aoi = t_aois.ix[hit_idx]
+                                        hit_name = hit_aoi["name"]
+                                        hit_x = int(hit_aoi["x"]) - code_x
+                                        hit_y = int(hit_aoi["y"]) - code_y
+                                        hit_id = "{0},{1}".format(hit_x, hit_y)
 
                                 hit_names.append(hit_name)
+                                hit_ids.append(hit_id)
 
                             output_rows.append([
                                 exp_id, trial_id,
                                 trial.attrib["base"], trial.attrib["version"],
                                 offset_kind, offset_x, offset_y, hit_kind,
                                 int(fix.attrib["start"]), int(fix.attrib["end"]),
-                                fix_x, fix_y
-                            ] + hit_names)
+                                fix_x, fix_y, pupil_left, pupil_right
+                            ] + hit_names + hit_ids)
 
         cols = ["exp_id", "trial_id", "base", "version",
                 "offset_kind", "offset_x", "offset_y", "hit_kind",
-                "start_ms", "end_ms",
-                "fix_x", "fix_y"] + ["aoi_{0}".format(k) for k in aoi_kinds]
+                "start_ms", "end_ms", "fix_x", "fix_y",
+                "pupil_left", "pupil_right"] \
+                + ["aoi_{0}".format(k) for k in aoi_kinds] \
+                + ["hit_id_{0}".format(k) for k in aoi_kinds]
 
         fixes_df = pandas.DataFrame(output_rows, columns=cols)
 
@@ -188,9 +252,95 @@ def task_all_fixations():
 
     return {
         "actions"  : [make_all],
-        "file_dep" : xml_paths,
+        "file_dep" : xml_paths + ["aois.csv.gz"],
         "targets"  : ["all_fixations.csv.gz"]
     }
+
+# -------------------------------------------------- 
+
+def task_trial_metrics():
+    def make_metrics():
+        import nltk
+        from collections import Counter
+
+        all_fixes = pandas.read_csv(gzip.open("all_fixations.csv.gz", "r"))
+        line_fixes = pandas.read_csv(gzip.open("line_fixations.csv.gz", "r"))
+        aois = pandas.read_csv(gzip.open("aois.csv.gz", "r"))
+        line_categories = pandas.read_csv(gzip.open("line_categories.csv.gz", "r"))
+        trials = pandas.read_csv(gzip.open("trials.csv.gz", "r"))
+
+        metric_rows = []
+        for (exp_id, trial_id), trial_fixes in all_fixes.groupby(["exp_id", "trial_id"]):
+            trial = trials[(trials.exp_id == exp_id) & (trials.trial_id == trial_id)]
+            if len(trial) == 0:
+                print "make_metrics: Skipping trial {0} {1}".format(exp_id, trial_id)
+                continue
+
+            trial = trial.irow(0)
+            trial_aois = aois[(aois.exp_id == exp_id) & (aois.trial_id == trial_id)]
+            trial_line_fixes = line_fixes[(line_fixes.exp_id == exp_id) & (line_fixes.trial_id == trial_id)]
+            trial_line_cats = eyecode.util.filter_program(line_categories, trial["base"], trial["version"])
+            nonblank_lines = set(trial_line_cats[trial_line_cats.categories != "blank line"].line)
+            
+            # Basic metrics
+            num_fixes = len(trial_fixes)
+            fix_duration = eyecode.metrics.avg_fixation_duration(trial_fixes)
+            scanpath_length = eyecode.metrics.scanpath_length(trial_fixes)
+            fixes_per_sec = num_fixes / float(trial["duration_sec"])
+            
+            # AOI first fixations
+            first_fixes = eyecode.metrics.first_fix_ms_aoi(trial_fixes)
+            first_output_box = np.nan
+            try:
+                first_output_box = first_fixes.ix["interface", "output box"]
+            except KeyError:
+                pass
+            
+            # Voluntary/involuntary fixations
+            voluntary = sum(trial_fixes.duration_ms > 320)
+            involuntary = sum(trial_fixes.duration_ms < 240)
+            
+            # Code box/output box transitions
+            trans_counter = Counter(nltk.ngrams(trial_fixes.aoi_interface.values, 2))
+            transitions = trans_counter[("code box", "output box")] + \
+                          trans_counter[("output_box", "code box")]
+                
+            # Spatial density
+            code_box = eyecode.util.filter_aois(trial_aois, "interface", "code box")
+            output_box = eyecode.util.filter_aois(trial_aois, "interface", "output box")
+            code_density = eyecode.metrics.spatial_density(trial_fixes, code_box)
+            output_density = eyecode.metrics.spatial_density(trial_fixes, output_box)
+            
+            # Convex hull area
+            code_fixes = trial_fixes[trial_fixes.aoi_interface == "code box"]
+            code_area = eyecode.metrics.convex_hull_area(code_fixes)
+
+            # Uwano review percent
+            time_cutoff = 0.3 * trial["duration_ms"]  # First 30% of trial
+            lines_fixated = set(trial_line_fixes[trial_line_fixes.end_ms < time_cutoff].line.unique())
+            lines_fixated = lines_fixated.intersection(nonblank_lines)
+            percent_lines = len(lines_fixated) / float(len(nonblank_lines))
+            
+            metric_rows.append([exp_id, trial_id, fix_duration, first_output_box,
+                                voluntary, involuntary, transitions, code_density,
+                                output_density, scanpath_length, code_area,
+                                num_fixes, fixes_per_sec, percent_lines])
+            
+        cols = ["exp_id", "trial_id", "avg_fixation_duration", "first_output_fix_ms", "voluntary_fixes",
+                "involuntary_fixes", "code_output_transitions", "code_density", "output_density",
+                "scanpath_length", "code_area", "num_fixes", "fixes_per_sec", "uwano_review_percent"]
+        metrics_df = pandas.DataFrame(metric_rows, columns=cols)
+
+        with gzip.open("trial_metrics.csv.gz", "w") as out_file:
+            metrics_df.to_csv(out_file, index=False)
+
+    return {
+        "actions"  : [make_metrics],
+        "file_dep" : ["all_fixations.csv.gz", "aois.csv.gz", "line_fixations.csv.gz",
+                      "line_categories.csv.gz", "trials.csv.gz"],
+        "targets"  : ["trial_metrics.csv.gz"]
+    }
+
 
 # -------------------------------------------------- 
 
@@ -344,6 +494,7 @@ def task_trials():
             py_years      = float(e.xpath(".//question[@name='python_years']/text()")[0])
             prog_years    = float(e.xpath(".//question[@name='programming_years']/text()")[0])
             cs_major      = e.xpath(".//question[@name='major']/text()")[0]
+            is_expert     = (py_years >= 5) or (prog_years >= 10)
 
             for t in e.xpath(".//trial"):
                 trial_id = int(t.attrib["id"])
@@ -390,6 +541,18 @@ def task_trials():
                 true_output = t.xpath("./true-output/text()")[0]
                 pred_output = t.xpath("./predicted-output/text()")[0]
 
+                # Output edit distance
+                perfect_dist      = nltk.metrics.edit_distance(pred_output.rstrip(),
+                                                               true_output.rstrip())
+                max_len           = max(len(pred_output.rstrip()), len(true_output.rstrip()))
+                perfect_dist_norm = perfect_dist / float(max_len)
+
+                pred_correct      = eyecode.util.correct_string(pred_output)
+                true_correct      = eyecode.util.correct_string(true_output)
+                correct_dist      = nltk.metrics.edit_distance(pred_correct, true_correct)
+                max_len           = max(len(pred_correct), len(true_correct))
+                correct_dist_norm = correct_dist / float(max_len)
+
                 # Metrics
                 code_chars   = int(t.xpath("./metrics/metric[@name = 'code chars']/@value")[0])
                 code_lines   = int(t.xpath("./metrics/metric[@name = 'code lines']/@value")[0])
@@ -412,7 +575,9 @@ def task_trials():
                     keystroke_count, keystroke_coefficient, response_proportion,
                     corrections, code_chars, code_lines, cyclo_comp, hal_effort, hal_volume,
                     output_chars, output_lines, true_output, pred_output,
-                    age, degree, gender, py_years, prog_years, cs_major])
+                    age, degree, gender, py_years, prog_years, cs_major,
+                    perfect_dist, perfect_dist_norm, correct_dist,
+                    correct_dist_norm, is_expert])
 
         cols = ["trial_id", "exp_id", "base", "version", "grade_value",
                 "grade_category", "started_ms", "ended_ms", "duration_ms",
@@ -420,13 +585,14 @@ def task_trials():
                 "response_proportion", "response_corrections", "code_chars", "code_lines",
                 "cyclo_comp", "hal_effort", "hal_volume", "output_chars", "output_lines",
                 "true_output", "pred_output", "age", "degree", "gender",
-                "py_years", "prog_years", "cs_major"]
+                "py_years", "prog_years", "cs_major", "perfect_dist",
+                "perfect_dist_norm", "correct_dist", "correct_dist_norm", "is_expert"]
 
         trial_df = pandas.DataFrame(rows, columns=cols)
 
         # Add derived columns
-        trial_df["grade_perfect"] = trial_df.grade_value == 10
-        trial_df["grade_correct"] = trial_df.grade_category.str.startswith("correct")
+        trial_df["grade_perfect"] = trial_df.perfect_dist == 0
+        trial_df["grade_correct"] = trial_df.correct_dist == 0
         trial_df["grade_common"] = trial_df.grade_category.str.startswith("common")
 
         trial_df["duration_sec"] = trial_df.duration_ms / 1000.0
@@ -439,6 +605,18 @@ def task_trials():
         for col in ["base", "version", "gender", "degree", "cs_major"]:
             values = list(trial_df[col].unique())
             trial_df[col + "_num"] = trial_df[col].apply(lambda v: values.index(v))
+
+        # Exclude trials whose durations are 3 standard deviations or more away
+        # from the mean (in log space).
+        exclude_idxs = []
+        for base, b_trials in trial_df.groupby("base"):
+            cutoff = b_trials.duration_ms_log.mean() + (3 * b_trials.duration_ms_log.std())
+            b_trials = b_trials[b_trials.duration_ms_log > cutoff]
+            exclude_idxs = exclude_idxs + list(b_trials.index.values)
+
+        if len(exclude_idxs) > 0:
+            trial_df = trial_df.drop(exclude_idxs)
+            print "Excluded {0} trials (duration outliers)".format(len(exclude_idxs))
 
         # Write to CSV
         with gzip.open("trials.csv.gz", "w") as out_file:
