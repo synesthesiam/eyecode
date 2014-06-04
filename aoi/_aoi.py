@@ -344,6 +344,7 @@ def scanpath_from_fixations(fixations, aoi_names=None, mixed=False,
         aoi_names = { n : [] for n in aoi_names }
     else:
         kinds = aoi_names.keys()
+        aoi_names = dict(aoi_names)  # This is modified later, so make a copy
 
     columns = kinds_to_cols(kinds)
 

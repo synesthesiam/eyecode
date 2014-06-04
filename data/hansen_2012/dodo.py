@@ -314,6 +314,11 @@ def task_trial_metrics():
             # Convex hull area
             code_fixes = trial_fixes[trial_fixes.aoi_interface == "code box"]
             code_area = eyecode.metrics.convex_hull_area(code_fixes)
+            code_duration_ms = code_fixes.duration_ms.sum()
+
+
+            output_fixes = trial_fixes[trial_fixes.aoi_interface == "output box"]
+            output_duration_ms = output_fixes.duration_ms.sum()
 
             # Uwano review percent
             time_cutoff = 0.3 * trial["duration_ms"]  # First 30% of trial
@@ -324,11 +329,14 @@ def task_trial_metrics():
             metric_rows.append([exp_id, trial_id, fix_duration, first_output_box,
                                 voluntary, involuntary, transitions, code_density,
                                 output_density, scanpath_length, code_area,
-                                num_fixes, fixes_per_sec, percent_lines])
+                                num_fixes, fixes_per_sec, percent_lines,
+                                code_duration_ms, output_duration_ms])
             
         cols = ["exp_id", "trial_id", "avg_fixation_duration", "first_output_fix_ms", "voluntary_fixes",
                 "involuntary_fixes", "code_output_transitions", "code_density", "output_density",
-                "scanpath_length", "code_area", "num_fixes", "fixes_per_sec", "uwano_review_percent"]
+                "scanpath_length", "code_area", "num_fixes", "fixes_per_sec", "uwano_review_percent",
+                "code_duration_ms", "output_duration_ms"]
+
         metrics_df = pandas.DataFrame(metric_rows, columns=cols)
 
         with gzip.open("trial_metrics.csv.gz", "w") as out_file:
@@ -641,11 +649,17 @@ def task_line_categories():
 
             code_lines = open(path, "r").readlines()
             line_cats = eyecode.util.python_line_categories(code_lines)
-            for i, cats in enumerate(line_cats):
-                output_rows.append([base, version, i+1, ",".join(cats)])
+            line_metrics = eyecode.util.python_token_metrics(code_lines)
+            metric_cols = ["line_length", "keywords", "identifiers",
+                           "operators", "whitespace_prop", "line_indent"]
 
-        cats_df = pandas.DataFrame(output_rows, columns=("base", "version",
-            "line", "categories"))
+            metrics_vals = line_metrics.sort("line")[metric_cols].values
+            for i, (cats, metrics) in enumerate(zip(line_cats, metrics_vals)):
+                output_rows.append(
+                    [base, version, i + 1, ",".join(cats)] + list(metrics))
+
+        columns = ["base", "version", "line", "categories"] + metric_cols
+        cats_df = pandas.DataFrame(output_rows, columns=columns)
 
         with gzip.open("line_categories.csv.gz", "w") as out_file:
             cats_df.to_csv(out_file, index=False)

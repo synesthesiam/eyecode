@@ -33,8 +33,12 @@ def programs():
     return __read_csv("programs")
 
 def line_categories():
-    """Automatically assigned categories for program lines"""
+    """Automatically assigned categories for program lines plus line metrics"""
     return __read_csv("line_categories")
+
+def trial_metrics():
+    """Metrics for each eye-tracking trial"""
+    return __read_csv("trial_metrics")
 
 def experiments():
     """Experiment/participant information.

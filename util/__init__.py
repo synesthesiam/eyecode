@@ -1,5 +1,6 @@
 import numpy as np, functools as ft, itertools as it, pandas
 import sys, cStringIO, contextlib
+import re
 from grading import *
 
 def filter_trial(frame, exp_id, trial_id=None):
@@ -92,6 +93,32 @@ def make_heatmap(points, screen_size, point_size, sigma_denom=5.0):
 
     return screen
 
+def python_line_tokens(code_lines, blank_lines=False):
+    from pygments.lexers import PythonLexer
+    lexer = PythonLexer()
+    code_str = "".join(code_lines)
+    all_tokens = list(lexer.get_tokens(code_str, unfiltered=True))
+    line_tokens = []
+    current_line = []
+
+    for t in all_tokens:
+        if t[1] == u"\n":
+            line_tokens.append(current_line)
+            current_line = []
+        else:
+            current_line.append(t)
+
+    rows = []
+    for i, tokens in enumerate(line_tokens):
+        # Check for blank line
+        line_str = code_lines[i].rstrip()
+        if (not blank_lines) and len(line_str.strip()) == 0:
+            continue
+
+        for t in tokens:
+            kind, value = str(t[0]), t[1]
+            yield line_str, i, kind, value, t
+
 def python_line_categories(code_lines):
     from pygments.lexers import PythonLexer
 
@@ -158,6 +185,58 @@ def python_line_categories(code_lines):
         line_categories.append(set(categories))
 
     return line_categories
+
+def python_token_metrics(code_lines, indent_size=4):
+    from pygments.lexers import PythonLexer
+    indent_regex = re.compile(r"^\s*")
+
+    lexer = PythonLexer()
+    code_str = "".join(code_lines)
+    all_tokens = list(lexer.get_tokens(code_str, unfiltered=True))
+    line_tokens = []
+    current_line = []
+
+    for t in all_tokens:
+        if t[1] == u"\n":
+            line_tokens.append(current_line)
+            current_line = []
+        else:
+            current_line.append(t)
+
+    rows = []
+    for i, tokens in enumerate(line_tokens):
+        # Check for blank line
+        line_str = code_lines[i].rstrip()
+        if len(line_str.strip()) == 0:
+            continue
+
+        assert len(tokens) > 0, "No tokens for line"
+
+        num_keywords = 0
+        num_identifiers = 0
+        num_operators = 0
+        line_length = len(line_str)
+        whitespace_prop = line_str.count(" ") / float(line_length)
+        line_indent = len(indent_regex.findall(line_str)[0]) / indent_size
+
+        for t in tokens:
+            kind, value = str(t[0]), t[1]
+            if kind.startswith(u"Token.Keyword"):
+                num_keywords += 1
+            elif kind.startswith(u"Token.Name"):
+                num_identifiers += 1
+            elif kind.startswith(u"Token.Operator"):
+                num_operators += 1
+
+        line_number = i + 1
+        rows.append([line_number, line_length, num_keywords,
+            num_identifiers, num_operators, whitespace_prop,
+            line_indent])
+
+    columns = ["line", "line_length", "keywords",
+               "identifiers", "operators", "whitespace_prop",
+               "line_indent"]
+    return pandas.DataFrame(rows, columns=columns)
 
 def all_pairs(items, fun, same_value=np.NaN):
     results = np.zeros((len(items), len(items)))
