@@ -8,6 +8,8 @@ from PIL import Image
 DATA_DIR = os.path.abspath(os.path.dirname(__file__))
 XML_DIR = os.path.join(DATA_DIR, "xml")
 
+CHAR_SIZE = (14, 29)
+
 def __read_csv(file_name):
     return pandas.read_csv(gzip.open(os.path.join(DATA_DIR, "{0}.csv.gz".format(file_name))))
 

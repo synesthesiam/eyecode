@@ -374,3 +374,20 @@ def pairwise(iterable, fillvalue=None):
     a, b = it.tee(iterable)
     next(b, fillvalue)
     return it.izip(a, b)
+
+def split_whitespace_tokens(line):
+    """Splits a line of text by whitespace"""
+    in_quote = False
+    token = ""
+    token_start = 0
+    for i, char in enumerate(line):
+        if char == ' ':
+            if len(token) > 0:
+                yield (token_start, token)
+                token = ""
+        else:
+            if len(token) == 0:
+                token_start = i
+            token += char
+    if len(token) > 0:
+        yield (token_start, token)

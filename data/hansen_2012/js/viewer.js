@@ -52,9 +52,10 @@ init();
 animate();
 
 function init() {
-    var trial_id = parseInt($.url().param("id"));
-    if (isNaN(trial_id)) {
-        alert("Need id");
+    var exp_id = parseInt($.url().param("exp_id"));
+    var trial_id = parseInt($.url().param("trial_id"));
+    if (isNaN(exp_id) || isNaN(trial_id)) {
+        alert("Need experiment and trial ids (exp_id, trial_id)");
         return;
     }
 
@@ -63,7 +64,7 @@ function init() {
         aoi_kind = "line";
     }
 
-    $("#screen").attr("src", "screens/" + trial_id + ".png");
+    $("#screen").attr("src", "screens/" + exp_id + "_" + trial_id + ".png");
 
     // Load AOIs
     jQuery.getJSON("js/trials/" + trial_id + ".aois.js", function(data) {

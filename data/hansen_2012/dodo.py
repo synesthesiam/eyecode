@@ -128,6 +128,38 @@ def task_aois():
                 num_list["local_id"] = "126,-2"
                 new_aois.append(num_list)
 
+            # Create whitespace-separated token AOIs
+            program_path = os.path.join("programs", "{0}_{1}.py".format(base, version))
+            code_box = eyecode.util.filter_aois(t_aois, "interface", "code box").irow(0)
+            t_line_aois = eyecode.util.filter_aois(t_aois, "line")
+
+            code_x, code_y = code_box["x"], code_box["y"] - 2
+            char_w = 14
+
+            token_aois = []
+            token_id = 1
+            for line_num, line in enumerate(open(program_path, "r")):
+                if len(line.strip()) == 0:
+                    continue
+                line = line.rstrip()
+                line_aoi = t_line_aois[t_line_aois.name == "line {0}".format(line_num + 1)].irow(0)
+                line_y = line_aoi["y"]
+                line_h = line_aoi["height"]
+                for start, token in eyecode.util.split_whitespace_tokens(line):
+                    x = code_x + (start * char_w)
+                    y = line_y
+                    w = len(token) * char_w
+                    h = line_h
+                    name = "token {0}".format(token_id)
+                    local_id = "{0},{1}".format(x, y)
+                    token_aois.append([exp_id, trial_id, "whitespace-token", name, local_id, x, y, w, h])
+                    token_id += 1
+                    
+            columns = ["exp_id", "trial_id", "kind", "name", "local_id",
+                       "x", "y", "width", "height"]
+            token_aois = pandas.DataFrame(token_aois, columns=columns)
+            new_aois.append(token_aois)
+
         # Append new AOIs
         if len(new_aois) > 0:
             aois_df = pandas.concat([aois_df] + new_aois, ignore_index=True)
@@ -158,7 +190,7 @@ def task_all_fixations():
         #hit_kinds = { "point" : eyecode.aoi.hit_point, "circle" : eyecode.aoi.hit_circle }
         hit_kinds = { "circle" : eyecode.aoi.hit_circle }
         hit_radius = 20
-        aoi_kinds = ["interface", "line", "syntax", "block", "code-grid"]
+        aoi_kinds = ["interface", "line", "syntax", "block", "code-grid", "whitespace-token"]
         aois = pandas.read_csv(gzip.open("aois.csv.gz", "r"))
 
         # Experiments
