@@ -562,7 +562,7 @@ def demographics(experiments, font_family=["Arial"], colors=PIE_COLORS,
     age_bins[3] = len(ages[(30 < ages) & (ages <= 35)])
     age_bins[4] = len(ages[35 < ages])
 
-    ax.pie(age_bins, labels=["18-20", "20-24", "25-30", "31-35", "> 35"],
+    ax.pie(age_bins, labels=["$18-20$", "$20-24$", "$25-30$", "$31-35$", "$> 35$"],
             autopct="%1.1f%%", shadow=False, colors=colors)
 
     shade_axis(ax, size=text_size)
@@ -578,7 +578,7 @@ def demographics(experiments, font_family=["Arial"], colors=PIE_COLORS,
     py_bins[3] = len(py[(2 < py) & (py <= 5)])
     py_bins[4] = len(py[5 < py])
 
-    ax.pie(py_bins, labels=["< 1/2", "1/2-1", "1-2", "2-5", "> 5"],
+    ax.pie(py_bins, labels=["$< 1/2$", "$1/2-1$", "$1-2$", "$2-5$", "$> 5$"],
             autopct="%1.1f%%", shadow=False, colors=colors)
 
     shade_axis(ax, size=text_size)
@@ -594,7 +594,7 @@ def demographics(experiments, font_family=["Arial"], colors=PIE_COLORS,
     prog_bins[3] = len(prog[(5 < prog) & (prog <= 10)])
     prog_bins[4] = len(prog[10 < prog])
 
-    ax.pie(prog_bins, labels=["< 2", "2-3", "3-5", "5-10", "> 10"],
+    ax.pie(prog_bins, labels=["$< 2$", "$2-3$", "$3-5$", "$5-10$", "$> 10$"],
             autopct="%1.1f%%", shadow=False, colors=colors)
 
     shade_axis(ax, size=text_size)

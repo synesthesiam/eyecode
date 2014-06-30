@@ -72,7 +72,9 @@ def draw_rectangles(aoi_rectangles, screen_image, colors=None,
     return Image.composite(rect_image, screen_image, rect_image)
 
 def aoi_transitions(trans_matrix, name_map=None,
-        show_probs=True, ax=None, cmap=None, figsize=None): 
+        show_probs=True, ax=None, cmap=None,
+        figsize=None, show_colorbar=True,
+        prob_threshold=0.0): 
     """Plots an AOI transition matrix with a colorbar.
 
     See also
@@ -124,15 +126,16 @@ def aoi_transitions(trans_matrix, name_map=None,
     ax.invert_yaxis()
     
     # Probability colorbar
-    cb = ax.figure.colorbar(polys)
-    cb.set_label("Transition Probability")
+    if show_colorbar:
+        cb = ax.figure.colorbar(polys)
+        cb.set_label("Transition Probability")
 
     # Probability text labels
     if show_probs:
         for row in rows:
             for col in cols:
                 prob = trans_matrix[row, col]
-                if prob > 0:
+                if prob > prob_threshold:
                     cell_rgba = cmap(prob)
                     text_color = contrast_color(cell_rgba)
                     ax.text(col + 0.5, row + 0.5, "{0:0.2f}".format(prob),
@@ -938,6 +941,33 @@ def fixation_heatmap(fixations, screen_image, alpha=0.7,
     heatmap_image.putalpha(ImageEnhance.Brightness(heatmap_alpha).enhance(alpha))
 
     return Image.composite(heatmap_image, screen_image, heatmap_image)
+
+def join_vertical(images, fill="white", spacing=10, line_width=1, line_color="black"):
+    width = max([img.size[0] for img in images])
+    height = sum([img.size[1] for img in images]) + \
+            (spacing * (len(images) - 1)) + \
+            (line_width * (len(images) - 1))
+
+    final_img = Image.new("RGBA", (width, height), color=fill)
+
+    # Paste images
+    y = 0
+    for img in images:
+        final_img.paste(img, (0, y))
+        y += img.size[1] + spacing + line_width
+
+    # Draw lines
+    draw = ImageDraw.Draw(final_img)
+    y = 0
+    for img in images:
+        start_y = y
+        y += img.size[1] + (spacing / 2) - (line_width / 2)
+        draw.line((0, y, width, y), fill=line_color, width=line_width)
+        y = start_y + img.size[1] + spacing + line_width
+
+    del draw
+    return final_img
+
 
 #def correlation_matrix(frame, cols, ax=None, figsize=None,
         #label_size="small", alpha=0.05, label_threshold=0.2,

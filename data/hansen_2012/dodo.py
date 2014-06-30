@@ -65,10 +65,67 @@ def task_raw_fixations():
 
 # -------------------------------------------------- 
 
+def task_intuitive_aois():
+    def get_category(t_kind):
+        if t_kind == "List":
+            return "list"
+        elif t_kind == "Args":
+            return "args"
+        elif t_kind == "Index":
+            return "index"
+        elif t_kind == "Condition":
+            return "condition"
+        elif t_kind == "Tuple":
+            return "Tuple"
+        else:
+            return eyecode.aoi.get_token_category(t_kind)
+
+    def make_intuitive_aois():
+        import pygments
+        import pygments.lexers
+        lexer = pygments.lexers.PythonLexer()
+
+        programs = pandas.read_csv(gzip.open("programs.csv.gz", "r"))
+        all_aois = []
+
+        for (base, version) in programs[["base", "version"]].values:
+            program_path = os.path.join("programs", "{0}_{1}.py".format(base, version))
+            with open(program_path, "r") as in_file:
+                code = "\n".join([line.rstrip() for line in in_file])
+
+            # Convert to 2-d tokens and then to monospace AOIs
+            tokens = lexer.get_tokens_unprocessed(code)
+            tokens2d = eyecode.aoi.tokens_to_2d(tokens)
+            tokens2d = eyecode.aoi.intuitive_python_tokens(tokens2d)
+
+            aois = eyecode.aoi.tokens2d_monospace_aois(tokens2d,
+                    font_size=(14, 29),
+                    get_category=get_category, line_offset=1,
+                    token_kind="intuitive", line_kind=None)
+
+            aois["base"] = base
+            aois["version"] = version
+            all_aois.append(aois)
+
+        # Append new AOIs
+        aois_df = pandas.concat(all_aois, ignore_index=True)
+
+        with gzip.open("intuitive_aois.csv.gz", "w") as out_file:
+            aois_df.to_csv(out_file, index=False)
+
+    return {
+        "actions"  : [make_intuitive_aois],
+        "file_dep" : ["programs.csv.gz"],
+        "targets"  : ["intuitive_aois.csv.gz"]
+    }
+
+# -------------------------------------------------- 
+
 def task_aois():
     def make_aois():
         output_rows = []
         base_versions = {}
+        intuitive_aois = pandas.read_csv(gzip.open("intuitive_aois.csv.gz", "r"))
 
         # Experiments
         for path in xml_paths:
@@ -160,6 +217,20 @@ def task_aois():
             token_aois = pandas.DataFrame(token_aois, columns=columns)
             new_aois.append(token_aois)
 
+            # Add intuitive AOIs
+            t_intuit_aois = eyecode.util.filter_program(intuitive_aois, base, version)
+            t_intuit_aois["x"] += code_x
+            t_intuit_aois["y"] += code_y - 1
+
+            for idx, row in t_intuit_aois.iterrows():
+                aoi_x, aoi_y = row["x"], row["y"]
+                local_id = "{0},{1}".format(aoi_x - code_x, aoi_y - code_y)
+                t_intuit_aois.ix[idx, "local_id"] = local_id
+
+            t_intuit_aois["exp_id"] = exp_id
+            t_intuit_aois["trial_id"] = trial_id
+            new_aois.append(t_intuit_aois)
+
         # Append new AOIs
         if len(new_aois) > 0:
             aois_df = pandas.concat([aois_df] + new_aois, ignore_index=True)
@@ -169,7 +240,7 @@ def task_aois():
 
     return {
         "actions"  : [make_aois],
-        "file_dep" : xml_paths,
+        "file_dep" : xml_paths + ["intuitive_aois.csv.gz"],
         "targets"  : ["aois.csv.gz"]
     }
 
@@ -190,7 +261,8 @@ def task_all_fixations():
         #hit_kinds = { "point" : eyecode.aoi.hit_point, "circle" : eyecode.aoi.hit_circle }
         hit_kinds = { "circle" : eyecode.aoi.hit_circle }
         hit_radius = 20
-        aoi_kinds = ["interface", "line", "syntax", "block", "code-grid", "whitespace-token"]
+        aoi_kinds = ["interface", "line", "syntax", "block", "code-grid",
+                     "whitespace-token", "intuitive"]
         aois = pandas.read_csv(gzip.open("aois.csv.gz", "r"))
 
         # Experiments

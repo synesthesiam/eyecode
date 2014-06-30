@@ -66,6 +66,10 @@ def transition_matrix(lines, num_lines=None):
     # Get rid of NaNs
     return np.nan_to_num(trans_probs)
 
+def norm_by_rows(matrix):
+    row_sums = matrix.sum(axis=1)
+    return matrix / row_sums.reshape((-1, 1))
+
 def gauss_kern(size, sigma=1.0):
    """ Returns a normalized 2D gauss kernel array for convolutions """
    h1 = size[0]
@@ -205,9 +209,12 @@ def python_token_metrics(code_lines, indent_size=4):
 
     rows = []
     for i, tokens in enumerate(line_tokens):
+        line_number = i + 1
+
         # Check for blank line
         line_str = code_lines[i].rstrip()
         if len(line_str.strip()) == 0:
+            rows.append([line_number, 0, 0, 0, 0, 0, 0])
             continue
 
         assert len(tokens) > 0, "No tokens for line"
@@ -216,8 +223,12 @@ def python_token_metrics(code_lines, indent_size=4):
         num_identifiers = 0
         num_operators = 0
         line_length = len(line_str)
-        whitespace_prop = line_str.count(" ") / float(line_length)
         line_indent = len(indent_regex.findall(line_str)[0]) / indent_size
+
+        # Indentation is not considered
+        line_str_noindent = line_str.lstrip()
+        line_length_noindent = len(line_str_noindent)
+        whitespace_prop = line_str_noindent.count(" ") / float(line_length_noindent)
 
         for t in tokens:
             kind, value = str(t[0]), t[1]
@@ -228,7 +239,6 @@ def python_token_metrics(code_lines, indent_size=4):
             elif kind.startswith(u"Token.Operator"):
                 num_operators += 1
 
-        line_number = i + 1
         rows.append([line_number, line_length, num_keywords,
             num_identifiers, num_operators, whitespace_prop,
             line_indent])

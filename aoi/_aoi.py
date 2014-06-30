@@ -515,7 +515,7 @@ def fixations_from_scanpath(scanpath, aoi_rectangles, duration_ms=200,
     fixations = pandas.DataFrame(rows, columns=fix_cols + aoi_cols)
     return fixations
 
-def transition_matrix(scanpath, shape=None, norm=True):
+def transition_matrix(scanpath, shape=None, norm=True, aoi_idx=None):
     """Returns a matrix of transition probabilities based on a scanpath.
 
     Parameters
@@ -544,7 +544,9 @@ def transition_matrix(scanpath, shape=None, norm=True):
     plot.aoi_transitions
 
     """
-    aoi_idx = { n : i for i, n in enumerate(sorted(scanpath.unique())) }
+    if aoi_idx is None:
+        aoi_idx = { n : i for i, n in enumerate(sorted(scanpath.unique())) }
+
     if shape is None:
         shape = (len(aoi_idx), len(aoi_idx))
 
@@ -794,8 +796,29 @@ def tokens_to_2d(tokens):
         else:
             yield (idx - x_offset, y, kind, text)
 
+def get_token_category(token_kind):
+    import pygments
+    import pygments.token
+    from pygments.token import Token
+
+    if token_kind == Token.Name:
+        return "identifier"
+    elif token_kind == Token.Operator:
+        return "operator"
+    elif token_kind == Token.Text:
+        return "text"
+    elif token_kind == Token.Keyword:
+        return "keyword"
+    elif token_kind == Token.Literal.Number.Integer:
+        return "integer"
+    elif token_kind == Token.Literal.String:
+        return "string"
+    else:
+        return "unknown"
+
 def tokens2d_monospace_aois(tokens2d, font_size=(11, 18),
                             line_offset=5, padding=(0, 0),
+                            get_category=get_token_category,
                             token_kind="token",
                             line_kind="line"):
     """
@@ -847,7 +870,7 @@ def tokens2d_monospace_aois(tokens2d, font_size=(11, 18),
         aoi_width = len(text) * font_size[0] + padding[0]
         aoi_height = font_size[1] + padding[1]
         aoi_kind = token_kind
-        category = get_token_category(t_kind)
+        category = get_category(t_kind)
         
         # Automatically generate AOI names based on token kind (e.g., Keyword
         # 1, Keyword 2).
@@ -856,52 +879,42 @@ def tokens2d_monospace_aois(tokens2d, font_size=(11, 18),
             
         kind_counts[t_kind] += 1
         aoi_name = "{0} {1}".format(t_kind, kind_counts[t_kind])
+        local_id = "{0},{1}".format(aoi_x, aoi_y)
         rows.append([aoi_x, aoi_y, aoi_width, aoi_height,
-                     aoi_kind, aoi_name, text, category])
+                     aoi_kind, aoi_name, text, category,
+                     local_id])
         
-    cols = ["x", "y", "width", "height", "kind", "name", "text", "category"]
+    assert len(rows) > 0, "No AOIs generated"
+    cols = ["x", "y", "width", "height", "kind",
+            "name", "text", "category", "local_id"]
     tokens_df = pandas.DataFrame(rows, columns=cols)
+    all_df = tokens_df
     
     # Create line AOIs
-    rows = []
-    for y, frame in tokens_df.groupby("y"):
-        # Determine line number from y coordinate
-        line_idx = (y + (padding[1] / 2)) / \
-            (font_size[1] + line_offset)
+    if line_kind is not None:
+        rows = []
+        for y, frame in tokens_df.groupby("y"):
+            # Determine line number from y coordinate
+            line_idx = (y + (padding[1] / 2)) / \
+                (font_size[1] + line_offset)
 
-        # The rectangle extends to the end of the rightmost token AOI
-        max_x = frame.irow(frame.x.argmax())
-        width = max_x["x"] + max_x["width"]
-        height = font_size[1] + padding[1]
-        line_text = " ".join(frame.sort("x").text.values)
-        rows.append([frame["x"].min(), y,
-                     width, height, line_kind,
-                     "line {0}".format(line_idx + 1),
-                     line_text, np.NaN])
-        
-    # Combine line and token AOIs for final DataFrame
-    lines_df = pandas.DataFrame(rows, columns=cols)
-    return pandas.concat([tokens_df, lines_df], ignore_index=True)
+            # The rectangle extends to the end of the rightmost token AOI
+            max_x = frame.irow(frame.x.argmax())
+            width = max_x["x"] + max_x["width"]
+            height = font_size[1] + padding[1]
+            line_text = " ".join(frame.sort("x").text.values)
+            aoi_x = frame["x"].min()
+            local_id = "{0},{1}".format(aoi_x, y)
+            rows.append([aoi_x, y,
+                         width, height, line_kind,
+                         "line {0}".format(line_idx + 1),
+                         line_text, np.NaN, local_id])
+            
+        # Combine line and token AOIs for final DataFrame
+        lines_df = pandas.DataFrame(rows, columns=cols)
+        all_df = pandas.concat([all_df, lines_df], ignore_index=True)
 
-def get_token_category(token_kind):
-    import pygments
-    import pygments.token
-    from pygments.token import Token
-
-    if token_kind == Token.Name:
-        return "identifier"
-    elif token_kind == Token.Operator:
-        return "operator"
-    elif token_kind == Token.Text:
-        return "text"
-    elif token_kind == Token.Keyword:
-        return "keyword"
-    elif token_kind == Token.Literal.Number.Integer:
-        return "integer"
-    elif token_kind == Token.Literal.String:
-        return "string"
-    else:
-        return "unknown"
+    return all_df
 
 def make_grid(rows, cols, names, width=100, height=None):
     """Creates a grid of equally-sized AOIs rectangles."""
@@ -1057,6 +1070,90 @@ def make_grid(x, y, width, height, num_horiz=10, num_vert=10,
         aoi_y += aoi_height
     
     return pandas.DataFrame(grid_aois, columns=["x", "y", "width", "height", "kind", "name", "local_id"])
+
+def intuitive_python_tokens(tokens2d):
+    import pygments
+    import pygments.lexers
+
+    # State
+    current_y = None
+    
+    in_list = False
+    list_start_x = None
+    list_str = ""    
+    list_kind = None
+    
+    in_tuple = False
+    tuple_start_x = None
+    tuple_str = ""
+    tuple_kind = None
+    
+    last_name = False
+    fun_def = False
+    if_line = False
+    
+    # Process tokens
+    for x, y, token, text in tokens2d:
+        if current_y != y:
+            current_y = y
+            last_name = False
+            in_list = False
+            list_start_x = None
+            list_str = ""            
+            fun_def = False
+            if_line = False
+            in_tuple = False
+            tuple_start_x = None
+            tuple_str = ""
+                        
+        token_str = str(token)
+        if not in_list and token_str == "Token.Punctuation" and text == "[":
+            list_start_x = x
+            in_list = True
+            list_str = "["
+            list_kind = "List" if not last_name else "Index"
+        elif in_list and token_str == "Token.Punctuation" and text == "]":
+            list_str += "]"
+            yield (list_start_x, current_y, "List", list_str)
+            in_list = False
+            list_start_x = None
+            list_str = ""
+            last_name = False
+            list_kind = None
+        elif in_list:
+            list_str += text
+        elif not in_tuple and token_str == "Token.Punctuation" and text == "(":
+            tuple_start_x = x
+            in_tuple = True
+            tuple_str += "("
+            if if_line:
+                tuple_kind = "Condition"
+            elif fun_def and last_name:
+                tuple_kind = "Args"
+            else:
+                tuple_kind = "Tuple"
+        elif in_tuple and token_str == "Token.Punctuation" and text == ")":
+            tuple_str += ")"
+            yield (tuple_start_x, current_y, tuple_kind, tuple_str)
+            tuple_start_x = None
+            tuple_str = ""
+            in_tuple = False
+        elif in_tuple:
+            tuple_str += text
+        else:
+            if (token_str == "Token.Keyword") and (text == "def"):
+                fun_def = True
+            elif (token_str == "Token.Keyword") and (text == "if"):
+                if_line = True            
+            last_name = (token_str == "Token.Name")
+            if (token_str == "Token.Literal.String") and text != '"':
+                x = x - 1
+                text = '"{0}"'.format(text)
+                
+            if token_str not in ["Token.Text", "Token.Punctuation"] and \
+                not (token_str == "Token.Operator" and text == ".") and \
+                not (token_str == "Token.Literal.String" and text == '"'):
+                yield (x, y, token, text)
 
 # }}}
 
@@ -1491,3 +1588,21 @@ def make_xml_coding(xml_root, tags, media_url):
 
 # }}}
 
+def scanpath_successor(scanpath, alpha, gamma, aoi_idx=None):
+    from nltk import ngrams
+
+    if aoi_idx is None:
+        aoi_idx = { n : i for i, n in enumerate(sorted(scanpath.unique())) }
+
+    trans_matrix = np.zeros(shape=(len(aoi_idx), len(aoi_idx)))
+    id_matrix = np.identity(len(aoi_idx))
+    digrams = ngrams(scanpath, 2)
+    for (a, b) in digrams:
+        j = aoi_idx[a]
+        i = aoi_idx[b]
+        I_j = id_matrix[:, j]
+        M_j = trans_matrix[:, j]
+        M_i = trans_matrix[:, i]
+        trans_matrix[:, i] += alpha * (I_j + (gamma * M_j) - M_i)
+        
+    return trans_matrix
