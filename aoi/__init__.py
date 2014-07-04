@@ -6,7 +6,7 @@ from _aoi import col_to_kind, kind_to_col, kinds_to_cols, envelope, \
 
 # Scanpath methods
 from _aoi import scanpath_from_fixations, fixations_from_scanpath, transition_matrix, \
-        scanpath_edit_distance, scanpath_successor
+        scanpath_edit_distance, scanpath_successor, line_output_transition_matrix
 
 # AOI creation and hit testing
 from _aoi import find_rectangles, hit_test, hit_circle, hit_point, make_grid

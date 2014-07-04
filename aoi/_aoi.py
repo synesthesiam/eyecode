@@ -803,7 +803,8 @@ def get_token_category(token_kind):
 
     if token_kind == Token.Name:
         return "identifier"
-    elif token_kind == Token.Operator:
+    elif token_kind == Token.Operator \
+            or token_kind == Token.Operator.Word:
         return "operator"
     elif token_kind == Token.Text:
         return "text"
@@ -1605,4 +1606,19 @@ def scanpath_successor(scanpath, alpha, gamma, aoi_idx=None):
         M_i = trans_matrix[:, i]
         trans_matrix[:, i] += alpha * (I_j + (gamma * M_j) - M_i)
         
+    return trans_matrix
+
+def line_output_transition_matrix(fixations, num_lines, norm=True):
+    shape = (num_lines + 1, num_lines + 1)
+    trans_matrix = np.zeros(shape)
+
+    aoi_names = { "line": True, "interface": ["output box"] }
+    aoi_idx = { "line {0}".format(i + 1) : i + 1 for i in range(num_lines) }
+    aoi_idx["output box"] = 0
+
+    for (exp_id, trial_id), t_fixes in fixations.groupby(["exp_id", "trial_id"]):
+        sp = scanpath_from_fixations(t_fixes, aoi_names, repeats=False, mixed=True)
+        trans_matrix += transition_matrix(sp, shape=shape, aoi_idx=aoi_idx,
+                norm=norm)
+
     return trans_matrix

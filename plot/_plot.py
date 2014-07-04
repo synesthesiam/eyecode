@@ -909,6 +909,66 @@ def super_code_image(fixes, line_fixes, num_lines, screen_img, trial,
             image_padding=3, bar_height=0.85, bar_mult=1.001, horiz_sep=5,
             method="time")
 
+def aoi_code_image(fixes, screen_img,
+        trial_aois, kind="code-grid", cmap=pyplot.cm.OrRd,
+        syntax_alpha=0.7, code_padding=5):
+
+    # Crop out code image
+    line_aois = trial_aois[(trial_aois.kind == "line")]
+    env = envelope(line_aois, code_padding).irow(0)
+    crop_rect = [env["x"], env["y"], env["x"] + env["width"], env["y"] + env["height"]]
+
+    # Hit test against grid AOIs
+    col = kind_to_col(kind)
+    code_aois = trial_aois[(trial_aois.kind == kind)]
+    code_fixes = fixes.dropna(subset=[col])
+    code_counts = code_fixes.groupby(col).duration_ms.sum()
+    max_code_count = float(max(code_counts))
+
+    def color_grid(kind, name, local_id):
+        rel_count = code_counts.get(name, default=0) / max_code_count
+        return matplotlib.colors.rgb2hex(cmap(rel_count))
+
+    # Create syntax-based image
+    code_box = trial_aois[(trial_aois.kind == "interface") &
+                          (trial_aois.name == "code box")].irow(0)
+    aoi_img = draw_rectangles(code_aois, screen_img, color_func=color_grid,
+            alpha=syntax_alpha, outline=None)
+    code_img = aoi_img.crop(crop_rect)
+
+    # Add colorbar
+    dpi = 90
+    width, height = (0.25 * dpi), code_img.size[1]
+    width_inches = width / float(dpi)
+    height_inches = height / float(dpi)
+
+    fig = pyplot.figure(figsize=(width_inches, height_inches), dpi=dpi, frameon=False)
+    ax = pyplot.Axes(fig, [0, 0, 1, 1])
+    ax.set_axis_off()
+    fig.add_axes(ax)
+
+    norm = matplotlib.colors.Normalize(vmin=min(code_counts),
+            vmax=max_code_count)
+
+    cb = matplotlib.colorbar.ColorbarBase(ax, cmap=cmap, norm=norm)
+
+    # Convert plot to image
+    plot_buffer = StringIO()
+    fig.savefig(plot_buffer, format="png", dpi=dpi)
+    pyplot.close(fig)
+    plot_buffer.pos = 0
+    plot_img = Image.open(plot_buffer)
+
+    # Combine AOI and colorbar images
+    horz_padding = (0.1 * dpi)
+    width = int(code_img.size[0] + horz_padding + plot_img.size[0])
+    height = int(code_img.size[1])
+    final_img = Image.new("RGBA", (width, height), color="white")
+    final_img.paste(code_img, (0, 0))
+    final_img.paste(plot_img, (int(horz_padding + code_img.size[0]), 0))
+
+    return final_img
+
 
 def fixation_heatmap(fixations, screen_image, alpha=0.7,
                      dot_size=200, cmap=None, dpi=90):
