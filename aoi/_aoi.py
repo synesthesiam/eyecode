@@ -808,7 +808,8 @@ def get_token_category(token_kind):
         return "operator"
     elif token_kind == Token.Text:
         return "text"
-    elif token_kind == Token.Keyword:
+    elif token_kind == Token.Keyword \
+            or token_kind == Token.Name.Builtin.Pseudo:
         return "keyword"
     elif token_kind == Token.Literal.Number.Integer:
         return "integer"

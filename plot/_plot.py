@@ -951,6 +951,8 @@ def aoi_code_image(fixes, screen_img,
             vmax=max_code_count)
 
     cb = matplotlib.colorbar.ColorbarBase(ax, cmap=cmap, norm=norm)
+    #cb.set_label("Total Fixation Duration (ms)")
+    cb.outline.set_linewidth(0)
 
     # Convert plot to image
     plot_buffer = StringIO()
@@ -960,7 +962,7 @@ def aoi_code_image(fixes, screen_img,
     plot_img = Image.open(plot_buffer)
 
     # Combine AOI and colorbar images
-    horz_padding = (0.1 * dpi)
+    horz_padding = (0.25 * dpi)
     width = int(code_img.size[0] + horz_padding + plot_img.size[0])
     height = int(code_img.size[1])
     final_img = Image.new("RGBA", (width, height), color="white")
