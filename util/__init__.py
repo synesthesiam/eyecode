@@ -67,6 +67,18 @@ def transition_matrix(lines, num_lines=None):
     return np.nan_to_num(trans_probs)
 
 def norm_by_rows(matrix):
+    """Normalizes a numpy array by rows (axis 1).
+    
+    Parameters
+    ----------
+    matrix : array_like
+        A numpy array with at least two axes.
+
+    Returns
+    -------
+    a : array_like
+        A row-normalized numpy array
+    """
     row_sums = matrix.sum(axis=1)
     return matrix / row_sums.reshape((-1, 1))
 
@@ -239,7 +251,7 @@ def python_token_metrics(code_lines, indent_size=4):
             elif kind.startswith(u"Token.Operator"):
                 num_operators += 1
 
-        rows.append([line_number, line_length, num_keywords,
+        rows.append([line_number, line_length_noindent, num_keywords,
             num_identifiers, num_operators, whitespace_prop,
             line_indent])
 

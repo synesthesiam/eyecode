@@ -1609,6 +1609,20 @@ def scanpath_successor(scanpath, alpha, gamma, aoi_idx=None):
         
     return trans_matrix
 
+def line_transition_matrix(fixations, num_lines, norm=True):
+    shape = (num_lines, num_lines)
+    trans_matrix = np.zeros(shape)
+
+    aoi_names = { "line": True }
+    aoi_idx = { "line {0}".format(i + 1) : i for i in range(num_lines) }
+
+    for (exp_id, trial_id), t_fixes in fixations.groupby(["exp_id", "trial_id"]):
+        sp = scanpath_from_fixations(t_fixes, aoi_names, repeats=False, mixed=True)
+        trans_matrix += transition_matrix(sp, shape=shape, aoi_idx=aoi_idx,
+                norm=norm)
+
+    return trans_matrix
+
 def line_output_transition_matrix(fixations, num_lines, norm=True):
     shape = (num_lines + 1, num_lines + 1)
     trans_matrix = np.zeros(shape)

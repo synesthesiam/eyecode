@@ -391,7 +391,8 @@ def highlight_code(code, lexer=None, formatter=None, filename=None,
 
 def line_code_image(line_fixes, code_image, num_lines, method="time",
         image_padding=10, image_dpi=120, bar_height=0.75, bar_mult=1.0,
-        width_inches=5, color=None, horiz_sep=0, **kwargs):
+        width_inches=5, color=None, horiz_sep=0,
+        line_numbers=False, **kwargs):
     """Plots fixation information as bars next to code lines.
     
     Parameters
@@ -468,15 +469,24 @@ def line_code_image(line_fixes, code_image, num_lines, method="time",
         
     # Plot bar graph with no axes or labels
     height_inches = (code_image.size[1] - (image_padding * 2)) / float(image_dpi)
-    fig = pyplot.figure(figsize=(width_inches, height_inches), dpi=image_dpi)
-    ax = pyplot.Axes(fig, [0, 0, 1, 1])
-    ax.set_axis_off()
-    fig.add_axes(ax)
+
+    if line_numbers:
+        # Leave a little room for the line numbers
+        fig, ax = pyplot.subplots(figsize=(width_inches, height_inches), dpi=image_dpi)
+        ax.set_position([0, 0, 0.9, 1])
+        ax.set_frame_on(False)
+    else:
+        # Take the entire figure space
+        fig = pyplot.figure(figsize=(width_inches, height_inches), dpi=image_dpi)
+        ax = pyplot.Axes(fig, [0, 0, 1, 1])
+        ax.set_axis_off()
+        fig.add_axes(ax)
+
     ax.barh(lines * bar_mult, method(line_fixes, lines), height=bar_height,
             color=color, **kwargs)
-    
+
     # Show every line
-    ax.set_yticks(lines)
+    ax.set_yticks(0.5 + lines)
     
     # Don't include line 0
     ax.set_ylim(1, num_lines + 1)
@@ -486,7 +496,22 @@ def line_code_image(line_fixes, code_image, num_lines, method="time",
     
     # Bars go from right to left
     ax.invert_xaxis()
-    
+
+    if line_numbers:
+        # Put line numbers on the right
+        ax.set_yticklabels(np.arange(1, num_lines + 1))
+        ax.yaxis.tick_right()
+
+        # Align line number labels
+        for label in ax.yaxis.get_ticklabels():
+            label.set_verticalalignment("center")
+        
+        # Hide tick lines
+        for tic in it.chain(ax.xaxis.get_major_ticks(),
+                            ax.yaxis.get_major_ticks()):
+            tic.tick1On = False
+            tic.tick2On = False
+
     # Combine with code image
     plot_buffer = StringIO()
     fig.savefig(plot_buffer, format="png", dpi=image_dpi)
@@ -859,8 +884,8 @@ def correlation_matrix(frame, cols, ax=None, figsize=None,
     return ax
 
 def super_code_image(fixes, line_fixes, num_lines, screen_img, trial,
-        trial_aois, cmap=pyplot.cm.OrRd, syntax_alpha=0.7,
-        grid_cell_size=(30, 30), code_padding=5):
+        trial_aois, aoi_kind="code-grid", cmap=pyplot.cm.OrRd,
+        aoi_alpha=0.7, code_padding=5, line_numbers=False):
 
     # Crop out code image
     line_aois = trial_aois[(trial_aois.kind == "line")]
@@ -868,10 +893,10 @@ def super_code_image(fixes, line_fixes, num_lines, screen_img, trial,
     crop_rect = [env["x"], env["y"], env["x"] + env["width"], env["y"] + env["height"]]
 
     # Hit test against grid AOIs
-    #fixes = hit_test(fixes, grid_aois, hit_fun=hit_point)
-    grid_aois = trial_aois[(trial_aois.kind == "code-grid")]
-    grid_fixes = fixes.dropna(subset=["aoi_code-grid"])
-    grid_counts = grid_fixes.groupby("aoi_code-grid").duration_ms.sum()
+    grid_aois = trial_aois[(trial_aois.kind == aoi_kind)]
+    grid_col = kind_to_col(aoi_kind)
+    grid_fixes = fixes.dropna(subset=[grid_col])
+    grid_counts = grid_fixes.groupby(grid_col).duration_ms.sum()
     max_grid_count = float(max(grid_counts))
 
     def color_grid(kind, name, local_id):
@@ -882,11 +907,11 @@ def super_code_image(fixes, line_fixes, num_lines, screen_img, trial,
     code_box = trial_aois[(trial_aois.kind == "interface") &
                           (trial_aois.name == "code box")].irow(0)
     aoi_img = draw_rectangles(grid_aois, screen_img, color_func=color_grid,
-            alpha=syntax_alpha, outline=None)
+            alpha=aoi_alpha, outline=None)
     code_img = aoi_img.crop(crop_rect)
 
     # Compute line colors based on their associated block fixation times
-    block_fixes = fixes.dropna(subset=["aoi_block"])
+    block_fixes = fixes.dropna(subset=[kind_to_col("block")])
     block_counts = block_fixes.groupby("hit_id_block").duration_ms.sum()
     block_aois = trial_aois[(trial_aois.kind == "block")]
     max_block_count = float(max(block_counts))
@@ -907,7 +932,7 @@ def super_code_image(fixes, line_fixes, num_lines, screen_img, trial,
     # Create final image combining lines, blocks, and syntax fixation counts
     return line_code_image(line_fixes, code_img, num_lines, color=colors,
             image_padding=3, bar_height=0.85, bar_mult=1.001, horiz_sep=5,
-            method="time")
+            method="time", line_numbers=line_numbers)
 
 def aoi_code_image(fixes, screen_img,
         trial_aois, kind="code-grid", cmap=pyplot.cm.OrRd,
@@ -1031,86 +1056,76 @@ def join_vertical(images, fill="white", spacing=10, line_width=1, line_color="bl
     return final_img
 
 
-#def correlation_matrix(frame, cols, ax=None, figsize=None,
-        #label_size="small", alpha=0.05, label_threshold=0.2,
-        #add_legend=True, method="spearman"):
-    #if ax is None:
-        #fig, ax = pyplot.subplots(1, 1, figsize=figsize)
+def saccade_angle_plot(saccades, size=250, color="blue", bgcolor="white",
+        outline="black", center_color="white", center_radius=2):
+    w, h = size, size
+    max_dist = saccades["dist_euclid"].max()
+    scale = w / (2.0 * max_dist)
 
-    #title = ""
-    #if isinstance(method, str):
-        #title = method.capitalize()
-        #if method == "pearson":
-            #method = scipy.stats.pearsonr
-        #elif method == "spearman":
-            #method = scipy.stats.spearmanr
-        #else:
-            #raise ValueError("method must be pearson or spearman")
+    img = Image.new("RGBA", (w, h), bgcolor)
+    draw = ImageDraw.Draw(img)
+    draw.ellipse((2, 2, w - 2, h - 2), outline=outline)
 
-    #ax.set_title("{0} Correlation Matrix ({1} columns)".format(title, len(cols)))
+    for _, row in saccades.iterrows():
+        x1, y1 = row["sacc_x1"], row["sacc_y1"]
+        x2, y2 = row["sacc_x2"], row["sacc_y2"]
+        dist = row["dist_euclid"]
+        x = float(x2 - x1) * scale
+        y = float(y2 - y1) * scale
+        draw.line((w/2, h/2, w/2 + x, h/2 + y), fill=color)
 
-    #corr2d = np.zeros(shape=(len(cols), len(cols)))
-    #sig2d = np.empty(shape=(len(cols), len(cols)), dtype=object)
-    #num_steps = 100
+    if center_color is not None:
+        r = center_radius
+        draw.ellipse((w/2 - r, h/2 - r, w/2 + r, h/2 + r), fill=center_color)
+    del draw
+    return img
 
-    #for i, col1 in enumerate(cols):
-        #for j, col2 in enumerate(cols):
-            #r, p = method(frame[col1], frame[col2])
-            #corr2d[i, j] = num_steps + (num_steps * r) if i != j else np.nan
-            #if (col1 != col2) and p < alpha:
-                #if abs(r) >= label_threshold:
-                    #sig2d[i, j] = "{0:.0f}".format(abs(r) * 100)
-                    #if r < 0:
-                        #sig2d[i, j] = "({0})".format(sig2d[i, j])
-                ##else:
-                    ##sig2d[i, j] = significant(p)
+def transition_centrality_graph(trans_matrix, name_map=None,
+        cmap=None, edge_cmap=None, node_size=1200, font_size=18,
+        figsize=(10, 10),
+        **kwargs):
+    import networkx as nx
+    graph = nx.DiGraph(trans_matrix)
 
-    #cdict = { "blue" : [(0.0, 0.0, 0.0),
-                        #(0.5, 1.0, 1.0),
-                        #(1.0, 0.0, 0.0)],
+    # Drop orphaned nodes (blank lines)
+    for n in graph.nodes():
+        if graph.degree(n) == 0:
+            graph.remove_node(n)
 
-              #"red"    : [(0.0, 1.0, 1.0),
-                          #(0.5, 1.0, 1.0),
-                          #(1.0, 0.0, 0.0)],
-              
-              #"green" : [(0.0, 0.0, 0.0),
-                         #(0.5, 1.0, 1.0),
-                         #(1.0, 1.0, 1.0)]}
+    if name_map is not None:
+        graph = nx.relabel_nodes(graph, name_map)
 
-    #cmap = LinearSegmentedColormap("heat", cdict, N=(num_steps * 2))
-    #masked = np.ma.masked_where(np.isnan(corr2d), corr2d)
-    #ax.set_axis_bgcolor("#CCCCCC")
-    #meshes = ax.pcolor(masked, cmap=cmap, edgecolors="#000000", vmin=0, vmax=(num_steps * 2))
-    
-    #for i in range(len(cols)):
-        #for j in range(len(cols)):
-            #if (i != j) and sig2d[i, j] is not None:
-                #pyplot.text(i + 0.5, j + 0.5, sig2d[i, j],
-                         #horizontalalignment="center",
-                         #verticalalignment="center",
-                         #size=label_size)
+    bc = nx.betweenness_centrality(graph)
+    sorted_bc = sorted(bc.items(), key=operator.itemgetter(1))
 
-    #fig = ax.figure
-    #if add_legend:
-        #cb = fig.colorbar(meshes, ticks=[0, num_steps, num_steps * 2],
-                          #format=pyplot.FixedFormatter(["-1", "0", "1"]))
+    min_bc = sorted_bc[0][1]
+    max_bc = sorted_bc[-1][1]
+    colors = [bc[n] for n in graph.nodes()]
 
-        #cb.set_label("{0} Correlation (x100)".format(title))
+    if cmap is None:
+        cdict = {
+            "red":   ((0.0, 0.75, 0.75),
+                      (1.0, 1.0, 1.0)),
 
-    ## Set exact limits
-    #ax.set_xlim((0, len(cols)))
-    #ax.set_ylim((0, len(cols)))
+            "green": ((0.0, 0.0, 0.0),
+                      (0.75, 1.0, 1.0),
+                      (1.0, 1.0, 1.0)),
 
-    ## Label columns
-    #loc = pyplot.FixedLocator([0.5 + x for x in range(len(cols))])
-    #ax.xaxis.set_major_locator(loc)
-    #ax.yaxis.set_major_locator(loc)
+            "blue":  ((0.0, 0.0, 0.0),
+                      (0.75, 0.0, 0.0),
+                      (1.0, 0.0, 0.0))
+        }
 
-    #tic = pyplot.FixedFormatter(cols)
-    #ax.xaxis.set_major_formatter(tic)
-    #ax.yaxis.set_major_formatter(tic)
+        cmap = LinearSegmentedColormap("custom", cdict)
 
-    #pyplot.xticks(rotation=90)
-    #fig.tight_layout()
+    fig = pyplot.figure(figsize=figsize)
+    ax = pyplot.Axes(fig, [0, 0, 1, 1])
+    fig.add_axes(ax)
+    ax.set_axis_off()
+    nx.draw_networkx(graph, ax=ax, node_size=node_size,
+                     node_color=colors, cmap=cmap,
+                     vmin=min_bc, vmax=max_bc,
+                     linewidths=1.5, edge_color="gray",
+                     **kwargs)
 
-    #return ax
+    return ax
