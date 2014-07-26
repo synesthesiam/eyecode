@@ -74,7 +74,7 @@ def draw_rectangles(aoi_rectangles, screen_image, colors=None,
 def aoi_transitions(trans_matrix, name_map=None,
         show_probs=True, ax=None, cmap=None,
         figsize=None, show_colorbar=True,
-        prob_threshold=0.0): 
+        prob_threshold=0.0, min_size=(5, 4)): 
     """Plots an AOI transition matrix with a colorbar.
 
     See also
@@ -90,7 +90,8 @@ def aoi_transitions(trans_matrix, name_map=None,
     if ax is None:
         if figsize is None:
             w, h = trans_matrix.shape[:2]
-            figsize = (w * 0.75, h * 0.5)
+            figsize = (max(min_size[0], w * 0.75),
+                       max(min_size[1], h * 0.5))
         pyplot.figure(figsize=figsize)
         ax = pyplot.axes()
 

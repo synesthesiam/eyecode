@@ -2,7 +2,7 @@ import os, sys
 import numpy as np
 import pandas
 
-from ..util import just2, window
+from ..util import just2, window, norm_by_rows
 
 # Constants {{{
 
@@ -1609,7 +1609,8 @@ def scanpath_successor(scanpath, alpha, gamma, aoi_idx=None):
         
     return trans_matrix
 
-def line_transition_matrix(fixations, num_lines, norm=True):
+def line_transition_matrix(fixations, num_lines, norm_inner=True,
+        norm_outer=True):
     shape = (num_lines, num_lines)
     trans_matrix = np.zeros(shape)
 
@@ -1619,21 +1620,29 @@ def line_transition_matrix(fixations, num_lines, norm=True):
     for (exp_id, trial_id), t_fixes in fixations.groupby(["exp_id", "trial_id"]):
         sp = scanpath_from_fixations(t_fixes, aoi_names, repeats=False, mixed=True)
         trans_matrix += transition_matrix(sp, shape=shape, aoi_idx=aoi_idx,
-                norm=norm)
+                norm=norm_inner)
+
+    if norm_outer:
+        trans_matrix = norm_by_rows(trans_matrix)
 
     return trans_matrix
 
-def line_output_transition_matrix(fixations, num_lines, norm=True):
+def line_output_transition_matrix(fixations, num_lines, norm_inner=True,
+        norm_outer=True, aoi_kind="line", aoi_idx=None):
     shape = (num_lines + 1, num_lines + 1)
     trans_matrix = np.zeros(shape)
 
-    aoi_names = { "line": True, "interface": ["output box"] }
-    aoi_idx = { "line {0}".format(i + 1) : i + 1 for i in range(num_lines) }
-    aoi_idx["output box"] = 0
+    aoi_names = { aoi_kind: True, "interface": ["output box"] }
+    if aoi_idx is None:
+        aoi_idx = { "{0} {1}".format(aoi_kind, i + 1) : i + 1 for i in range(num_lines) }
+        aoi_idx["output box"] = 0
 
     for (exp_id, trial_id), t_fixes in fixations.groupby(["exp_id", "trial_id"]):
         sp = scanpath_from_fixations(t_fixes, aoi_names, repeats=False, mixed=True)
         trans_matrix += transition_matrix(sp, shape=shape, aoi_idx=aoi_idx,
-                norm=norm)
+                norm=norm_inner)
+
+    if norm_outer:
+        trans_matrix = norm_by_rows(trans_matrix)
 
     return trans_matrix
