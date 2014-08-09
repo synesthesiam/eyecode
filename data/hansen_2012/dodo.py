@@ -368,6 +368,7 @@ def task_trial_metrics():
         from collections import Counter
 
         all_fixes = pandas.read_csv(gzip.open("all_fixations.csv.gz", "r"))
+        all_saccades = pandas.read_csv(gzip.open("all_saccades.csv.gz", "r"))
         line_fixes = pandas.read_csv(gzip.open("line_fixations.csv.gz", "r"))
         aois = pandas.read_csv(gzip.open("aois.csv.gz", "r"))
         line_categories = pandas.read_csv(gzip.open("line_categories.csv.gz", "r"))
@@ -412,7 +413,12 @@ def task_trial_metrics():
             # Spatial density
             code_box = eyecode.util.filter_aois(trial_aois, "interface", "code box")
             output_box = eyecode.util.filter_aois(trial_aois, "interface", "output box")
-            code_density = eyecode.metrics.spatial_density(trial_fixes, code_box)
+
+            num_code_cols = int(np.ceil(code_box["width"] / GRID_AOI_SIZE[0]))
+            num_code_rows = int(np.ceil(code_box["height"] / GRID_AOI_SIZE[1]))
+            code_density = eyecode.metrics.spatial_density(trial_fixes, code_box,
+                    num_cols=num_code_cols, num_rows = num_code_rows)
+
             output_density = eyecode.metrics.spatial_density(trial_fixes, output_box)
             
             # Convex hull area
@@ -429,17 +435,23 @@ def task_trial_metrics():
             lines_fixated = set(trial_line_fixes[trial_line_fixes.end_ms < time_cutoff].line.unique())
             lines_fixated = lines_fixated.intersection(nonblank_lines)
             percent_lines = len(lines_fixated) / float(len(nonblank_lines))
+
+            # Avg. saccade length
+            t_saccades = eyecode.util.filter_trial(all_saccades, exp_id, trial_id)
+            avg_saccade_length = eyecode.metrics.avg_saccade_length(t_saccades)
             
+            # Add row
             metric_rows.append([exp_id, trial_id, fix_duration, first_output_box,
                                 voluntary, involuntary, transitions, code_density,
                                 output_density, scanpath_length, code_area,
                                 num_fixes, fixes_per_sec, percent_lines,
-                                code_duration_ms, output_duration_ms])
+                                code_duration_ms, output_duration_ms,
+                                avg_saccade_length])
             
         cols = ["exp_id", "trial_id", "avg_fixation_duration", "first_output_fix_ms", "voluntary_fixes",
                 "involuntary_fixes", "code_output_transitions", "code_density", "output_density",
                 "scanpath_length", "code_area", "num_fixes", "fixes_per_sec", "uwano_review_percent",
-                "code_duration_ms", "output_duration_ms"]
+                "code_duration_ms", "output_duration_ms", "avg_saccade_length"]
 
         metrics_df = pandas.DataFrame(metric_rows, columns=cols)
 
@@ -449,7 +461,7 @@ def task_trial_metrics():
     return {
         "actions"  : [make_metrics],
         "file_dep" : ["all_fixations.csv.gz", "aois.csv.gz", "line_fixations.csv.gz",
-                      "line_categories.csv.gz", "trials.csv.gz"],
+                      "line_categories.csv.gz", "trials.csv.gz", "all_saccades.csv.gz"],
         "targets"  : ["trial_metrics.csv.gz"]
     }
 

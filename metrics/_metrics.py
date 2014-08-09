@@ -2,6 +2,7 @@ import operator
 import numpy as np
 import pandas
 from ..aoi import get_aoi_columns, get_aoi_kinds, kind_to_col, kinds_to_cols
+from ..util import pairwise
 
 # Fixation Metrics {{{
 
@@ -421,3 +422,11 @@ def fixation_ms_proportion(aoi_fixations):
     ms_per_aoi = fixation_ms_per_aoi(aoi_fixations)
     total_ms = ms_per_aoi.groupby(level="kind").sum().astype(float)
     return ms_per_aoi.div(total_ms, level="kind")
+
+def time_between_fixes(scanpath):
+    rows = []
+    for aoi_name, aoi_fixes in scanpath.groupby(scanpath):
+        for time_early, time_late in pairwise(sorted(aoi_fixes.index)):
+            rows.append([aoi_name, time_late - time_early])
+
+    return pandas.DataFrame(rows, columns=["name", "time_ms"])

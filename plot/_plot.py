@@ -10,9 +10,10 @@ from PIL import Image, ImageDraw, ImageEnhance
 from StringIO import StringIO
 
 from kelly_colors import kelly_colors
-from ..aoi import get_aoi_kinds, kind_to_col, envelope, make_grid, hit_test, hit_point
+from ..aoi import get_aoi_kinds, kind_to_col, envelope, make_grid, hit_test, hit_point, scanpath_from_fixations
 from ..util import contrast_color, significant, make_heatmap
 from ..stats import permute_correlation_matrix
+from ..metrics import time_between_fixes
 
 # AOI plots {{{
 
@@ -56,11 +57,15 @@ def draw_rectangles(aoi_rectangles, screen_image, colors=None,
     if color_func is None:
         color_func = lambda k, n, li: colors.next()
 
+    if not callable(outline):
+        outline = lambda k, n, li: outline
+
     row_cols = ["x", "y", "width", "height", "name", "local_id"]
     for kind, kind_rows in aoi_rectangles.groupby("kind"):
         for x, y, w, h, name, local_id in kind_rows[row_cols].values:
             draw.rectangle([(x, y), (x + w - 1, y + h - 1)],
-                    fill=color_func(kind, name, local_id), outline=outline)
+                    fill=color_func(kind, name, local_id),
+                    outline=outline(kind, name, local_id))
 
     del draw
 
@@ -886,7 +891,8 @@ def correlation_matrix(frame, cols, ax=None, figsize=None,
 
 def super_code_image(fixes, line_fixes, num_lines, screen_img, trial,
         trial_aois, aoi_kind="code-grid", cmap=pyplot.cm.OrRd,
-        aoi_alpha=0.7, code_padding=5, line_numbers=False):
+        aoi_alpha=0.7, code_padding=5, line_numbers=False,
+        time_between=False, between_cmap=pyplot.cm.binary):
 
     # Crop out code image
     line_aois = trial_aois[(trial_aois.kind == "line")]
@@ -904,11 +910,26 @@ def super_code_image(fixes, line_fixes, num_lines, screen_img, trial,
         rel_count = grid_counts.get(name, default=0) / max_grid_count
         return matplotlib.colors.rgb2hex(cmap(rel_count))
 
+    outline_func = None
+    if time_between:
+        sp = scanpath_from_fixations(grid_fixes, aoi_kind)
+        fix_between = time_between_fixes(sp)
+        between_means = np.log(fix_between.groupby("name").time_ms.mean())
+        min_time_between = float(min(between_means))
+        max_time_between = float(max(between_means))
+
+        def color_outline(kind, name, local_id):
+            rel_time = (between_means.get(name, default=0) - min_time_between) / \
+                (max_time_between - min_time_between)
+            return matplotlib.colors.rgb2hex(between_cmap(1 - rel_time))
+
+        outline_func = color_outline
+
     # Create syntax-based image
     code_box = trial_aois[(trial_aois.kind == "interface") &
                           (trial_aois.name == "code box")].irow(0)
     aoi_img = draw_rectangles(grid_aois, screen_img, color_func=color_grid,
-            alpha=aoi_alpha, outline=None)
+            alpha=aoi_alpha, outline=outline_func)
     code_img = aoi_img.crop(crop_rect)
 
     # Compute line colors based on their associated block fixation times
