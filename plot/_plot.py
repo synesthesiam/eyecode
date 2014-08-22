@@ -58,7 +58,8 @@ def draw_rectangles(aoi_rectangles, screen_image, colors=None,
         color_func = lambda k, n, li: colors.next()
 
     if not callable(outline):
-        outline = lambda k, n, li: outline
+        outline_color = outline
+        outline = lambda k, n, li: outline_color
 
     row_cols = ["x", "y", "width", "height", "name", "local_id"]
     for kind, kind_rows in aoi_rectangles.groupby("kind"):
@@ -150,7 +151,7 @@ def aoi_transitions(trans_matrix, name_map=None,
     return ax
 
 def aoi_barplot(fixations, method="time", ylabel=None,
-        scalar=1e-3, ax=None, figsize=None):
+        scalar=1e-3, aoi_kinds=None, ax=None, figsize=None):
     """Plots fixation time or counts for all AOI kinds and names.
 
     Parameters
@@ -195,7 +196,9 @@ def aoi_barplot(fixations, method="time", ylabel=None,
         pyplot.figure(figsize=figsize)
         ax = pyplot.axes()
 
-    aoi_kinds = get_aoi_kinds(fixations)
+    if aoi_kinds is None:
+        aoi_kinds = get_aoi_kinds(fixations)
+
     colors = it.cycle(kelly_colors)
 
     if method == "time":

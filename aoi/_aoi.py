@@ -119,9 +119,9 @@ def envelope(aois, padding=0, kind="", name=""):
     bbox = [x1 - (padding/2), y1 - (padding/2),
             x2 - x1 + padding,
             y2 - y1 + padding,
-            kind, name]
+            kind, name, np.NaN]
 
-    cols = ["x", "y", "width", "height", "kind", "name"]
+    cols = ["x", "y", "width", "height", "kind", "name", "local_id"]
     return pandas.DataFrame([bbox], columns=cols)
 
 def pad(aois, padding):
@@ -901,7 +901,7 @@ def tokens2d_monospace_aois(tokens2d, font_size=(11, 18),
                 (font_size[1] + line_offset)
 
             # The rectangle extends to the end of the rightmost token AOI
-            max_x = frame.irow(frame.x.argmax())
+            max_x = frame.ix[frame.x.argmax()]
             width = max_x["x"] + max_x["width"]
             height = font_size[1] + padding[1]
             line_text = " ".join(frame.sort("x").text.values)

@@ -152,20 +152,21 @@ def task_aois():
                         aoi.attrib["kind"], aoi.attrib["name"],
                         aoi_x, aoi_y,
                         int(aoi.attrib["width"]), int(aoi.attrib["height"]),
-                        aoi_id
+                        aoi_id, trial.attrib["base"], trial.attrib["version"]
                     ])
 
                 # Cache base/version for later
                 base_versions[(exp_id, trial_id)] = (trial.attrib["base"], trial.attrib["version"])
 
         aois_df = pandas.DataFrame(output_rows, columns=("exp_id", "trial_id",
-            "kind", "name", "x", "y", "width", "height", "local_id"))
+            "kind", "name", "x", "y", "width", "height", "local_id", "base", "version"))
 
         # Add program specific AOIs
         new_aois = []
         for (exp_id, trial_id), t_aois in aois_df.groupby(["exp_id", "trial_id"]):
             line_aois = eyecode.util.filter_aois(t_aois, "line")
             line_env = eyecode.aoi.envelope(line_aois).irow(0)
+            base, version = base_versions[(exp_id, trial_id)]
 
             # Create grid-based AOIs using line AOIs
             grid_aois = eyecode.aoi.make_grid(line_env["x"], line_env["y"],
@@ -174,9 +175,10 @@ def task_aois():
                     kind="code-grid")
             grid_aois["exp_id"] = exp_id
             grid_aois["trial_id"] = trial_id
+            grid_aois["base"] = base
+            grid_aois["version"] = version
             new_aois.append(grid_aois)
 
-            base, version = base_versions[(exp_id, trial_id)]
             if base == "counting":
                 num_list_aois = t_aois[t_aois.local_id.isin(["126,-2", "294,-2"])]
                 num_list = eyecode.aoi.envelope(num_list_aois, kind="syntax-meta", name="number-list")
