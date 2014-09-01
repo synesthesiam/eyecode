@@ -238,16 +238,15 @@ def aois_to_json(aois):
     """Converts AOI rectangles to JSON."""
     import json
     js_aois = []
-    cols = ["kind", "name", "x", "y", "width", "height", "program"]
-    for kind, name, x, y, w, h, prog in aois[cols].values:
+    cols = ["kind", "name", "x", "y", "width", "height"]
+    for kind, name, x, y, w, h in aois[cols].values:
         js_aois.append({
             "kind"    : kind,
             "name"    : name,
             "x"       : x,
             "y"       : y,
             "width"   : w,
-            "height"  : h,
-            "program" : prog,
+            "height"  : h
         })
 
     return json.dumps(js_aois)
