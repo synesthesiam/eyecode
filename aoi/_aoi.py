@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, re
 import numpy as np
 import pandas
 
@@ -483,11 +483,18 @@ def fixations_from_scanpath(scanpath, aoi_rectangles, duration_ms=200,
     6     50     50      1320          200       D
 
     """
-    aoi_names = sorted(aoi_rectangles.keys())
-
     if isinstance(aoi_kinds, str):
         kind = aoi_kinds
+        aoi_names = scanpath.unique()
         aoi_kinds = { n : kind for n in aoi_names }
+
+    if isinstance(aoi_rectangles, pandas.DataFrame):
+        rect_dict = {}
+        for idx, row in aoi_rectangles.iterrows():
+            # name -> (x, y, width, height)
+            rect_dict[row["name"]] = \
+                (row["x"], row["y"], row["width"], row["height"])
+        aoi_rectangles = rect_dict
 
     sorted_kinds = sorted(set(aoi_kinds.values()))
     aoi_cols = kinds_to_cols(sorted_kinds)
@@ -513,6 +520,7 @@ def fixations_from_scanpath(scanpath, aoi_rectangles, duration_ms=200,
 
     fix_cols = ["fix_x", "fix_y", "start_ms", "duration_ms"]
     fixations = pandas.DataFrame(rows, columns=fix_cols + aoi_cols)
+    fixations["end_ms"] = fixations["start_ms"] + fixations["duration_ms"]
     return fixations
 
 def transition_matrix(scanpath, shape=None, norm=True, aoi_idx=None):
@@ -613,11 +621,17 @@ def find_rectangles(screen_image, black_thresh=255, white_row_thresh=3,
     rects = []
     rect_i = 1
 
+    # Convert to grayscale
+    img_data = np.array(screen_image.convert("L"))
+
+    # Pad with white rows on the bottom to catch final line
+    white_padding = 255 + np.zeros((white_row_thresh + 1, img_data.shape[1]))
+    img_data = np.vstack((img_data, white_padding))
+
     # Scan down each 1-pixel line of the image, looking for black pixels (lower
     # than black_thresh). If found, start a rectangle. If more than
     # white_row_thresh lines are white in a row, end the block where the first
     # white row was found.
-    img_data = np.array(screen_image.convert("L"))
     for y in range(img_data.shape[0]):
         line = img_data[y, :]
         blacks = line < black_thresh
@@ -646,7 +660,8 @@ def find_rectangles(screen_image, black_thresh=255, white_row_thresh=3,
                 name = "line {0}".format(rect_i)
 
                 rects.append([vert_kind, name, left_x, start_y,
-                    right_x - left_x + 1, end_y - start_y + 1])
+                    right_x - left_x + 1, end_y - start_y + 1,
+                    np.NaN])
 
                 # ------------------------------------------------------------
                 # Scan right on each 1-pixel column of the line, looking for
@@ -674,7 +689,8 @@ def find_rectangles(screen_image, black_thresh=255, white_row_thresh=3,
 
                             # Block ends; record x, y, width, height
                             rects.append([horz_kind, name, start_x, start_y,
-                                end_x - start_x + 1, end_y - start_y + 1])
+                                end_x - start_x + 1, end_y - start_y + 1,
+                                np.NaN])
 
                             # Reset horizontal
                             start_x, end_x = None, 0
@@ -690,7 +706,7 @@ def find_rectangles(screen_image, black_thresh=255, white_row_thresh=3,
 
     # Convert to data frame
     rect_df = pandas.DataFrame(rects, columns=["kind", "name",
-        "x", "y", "width", "height"])
+        "x", "y", "width", "height", "local_id"])
 
     return rect_df
 
@@ -1192,7 +1208,7 @@ def hit_circle(fix_pt, aoi_polys, radius=1, **kwargs):
                 best_area = area
     return best_aoi
 
-def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle,
+def hit_test(fixations, aois, offsets=None, hit_fun="circle",
         hit_radius=20, **kwargs):
     """Hit tests fixations against AOI rectangles.
 
@@ -1208,8 +1224,9 @@ def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle,
         A DataFrame with different fixations offsets to apply (name, x, y).
         If None, no offset is applied
 
-    hit_fun : callable
-        Hit testing function. See hit_point and hit_circle for examples
+    hit_fun : callable or str
+        Hit testing function ("circle" or "point"). See hit_point and
+        hit_circle for examples
 
     hit_radius : int
         Fixation circle radius for hit_circle
@@ -1258,6 +1275,11 @@ def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle,
                             for _, a in group.iterrows() }
 
     aoi_kinds = sorted(aoi_polys.keys())
+    aoi_cols = kinds_to_cols(aoi_kinds)
+
+    # Drop any existing AOI columns that would be duplicated
+    keep_cols = [c for c in fixations.columns if not c in aoi_cols]
+    fixations = fixations[keep_cols]
 
     # Default offset
     if offsets is None:
@@ -1268,6 +1290,13 @@ def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle,
         }, index=[0])
 
     add_offset_kind = not ("offset_kind" in fixations.columns)
+
+    if isinstance(hit_fun, str):
+        assert hit_fun in ["point", "circle"], "Unknown hit_fun"
+        if hit_fun == "point":
+            hit_fun = hit_point
+        elif hit_fun == "circle":
+            hit_fun = hit_circle
 
     # Hit test all fixations
     for _, fix in fixations.iterrows():
@@ -1299,7 +1328,7 @@ def hit_test(fixations, aois, offsets=None, hit_fun=hit_circle,
         cols += ["offset_kind"]
 
     # Add AOI hit columns
-    cols += kinds_to_cols(aoi_kinds)
+    cols += aoi_cols
 
     return pandas.DataFrame(output_rows, columns=cols)
 
@@ -1646,3 +1675,19 @@ def line_output_transition_matrix(fixations, num_lines, norm_inner=True,
         trans_matrix = norm_by_rows(trans_matrix)
 
     return trans_matrix
+
+def to_line_fixations(aoi_fixes, line_kind="line",
+        line_regex=r"^line (\d+)$",
+        line_num_col="line"):
+    line_regex = re.compile(line_regex)
+    line_col = kind_to_col(line_kind)
+
+    line_fixes = aoi_fixes.copy()
+    line_fixes[line_num_col] = 0
+    for idx, row in line_fixes.iterrows():
+        s = row[line_col]
+        line_fixes.ix[idx, line_num_col] = \
+                int(line_regex.match(s).group(1))
+
+    return line_fixes
+

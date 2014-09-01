@@ -9,7 +9,7 @@ from matplotlib.colors import LinearSegmentedColormap
 from PIL import Image, ImageDraw, ImageEnhance
 from StringIO import StringIO
 
-from kelly_colors import kelly_colors
+from kelly_colors import kelly_colors, kelly_colors_alpha
 from ..aoi import get_aoi_kinds, kind_to_col, envelope, make_grid, hit_test, hit_point, scanpath_from_fixations
 from ..util import contrast_color, significant, make_heatmap
 from ..stats import permute_correlation_matrix
@@ -34,12 +34,18 @@ def draw_rectangles(aoi_rectangles, screen_image, colors=None,
         if there are more AOI kinds than colors. If None, kelly_colors are used.
         Default is None (kelly_colors).
 
-    outline : str, optional
-        Rectangle outline color (default is 'black')
+    outline : str or callable, optional
+        Rectangle outline color (default is 'black'). If callable, the function
+        is called for each rectangle with the AOI's kind, name, and local id.
 
     alpha : float, optional
         Transparency of AOI rectangles (0-1, 1 = opaque).
         Default is 0.5 (50% transparency).
+
+    color_func : callable or None, optional
+        Function to determine rectangle fill color. If not None, this function
+        is used instead of colors. Called for each rectangle with the AOI's
+        kind, name, and local id. Default is None (use colors).
 
     Returns
     -------
@@ -179,6 +185,9 @@ def aoi_barplot(fixations, method="time", ylabel=None,
         Number used to scale the height of bars. This is 0.001 by default,
         meaning time units will be in seconds rather than milliseconds.
 
+    aoi_kinds : str or list, optional
+        AOI kinds to plot. If None (default), all kinds are plotted.
+
     ax : matplotlib Axes or None, optional
         An Axes to plot onto or None to create a new one (default: None)
 
@@ -198,6 +207,8 @@ def aoi_barplot(fixations, method="time", ylabel=None,
 
     if aoi_kinds is None:
         aoi_kinds = get_aoi_kinds(fixations)
+    elif isinstance(aoi_kinds, str):
+        aoi_kinds = [aoi_kinds]
 
     colors = it.cycle(kelly_colors)
 
@@ -299,6 +310,9 @@ def fix_circles(fixations, screen_image, radius_min=10, radius_max=35, fill="red
     draw = ImageDraw.Draw(poly_image)
     min_duration, max_duration = fixations.duration_ms.min(), fixations.duration_ms.max()
 
+    if radius_min > radius_max:
+        radius_max = radius_min
+
     if line_fill is None:
         line_fill = fill
 
@@ -317,6 +331,10 @@ def fix_circles(fixations, screen_image, radius_min=10, radius_max=35, fill="red
                     ((fix["duration_ms"] - min_duration) / float(max_duration - min_duration))
                 )
             )
+
+        # Happens if all fixations have the same duration
+        if np.isnan(r):
+            r = radius_min
 
         bbox = (x - r, y - r, x + r, y + r)
         draw.ellipse(bbox, fill=fill, outline=outline)

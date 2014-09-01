@@ -22,3 +22,5 @@ kelly_colors = [
     "#FFFFFF", # White
     "#000000", # Black
 ]
+
+kelly_colors_alpha = [c + "FF" for c in kelly_colors]

@@ -10,4 +10,8 @@ from _aoi import scanpath_from_fixations, fixations_from_scanpath, transition_ma
         line_transition_matrix
 
 # AOI creation and hit testing
-from _aoi import find_rectangles, hit_test, hit_circle, hit_point, make_grid
+from _aoi import find_rectangles, hit_test, hit_circle, hit_point, make_grid, \
+        to_line_fixations
+
+# Fixation viewer methods
+from _aoi import fixations_to_json
