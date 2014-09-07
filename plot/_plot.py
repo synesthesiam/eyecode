@@ -1,7 +1,7 @@
 import operator, itertools as it
 
 import numpy as np
-import scipy
+import scipy, pandas
 import matplotlib
 from matplotlib import pyplot, cm
 from matplotlib.ticker import MultipleLocator, FuncFormatter, FixedFormatter
@@ -11,7 +11,7 @@ from StringIO import StringIO
 
 from kelly_colors import kelly_colors, kelly_colors_alpha
 from ..aoi import get_aoi_kinds, kind_to_col, envelope, make_grid, hit_test, hit_point, scanpath_from_fixations
-from ..util import contrast_color, significant, make_heatmap
+from ..util import contrast_color, significant, make_heatmap, angle_between, steady_state
 from ..stats import permute_correlation_matrix
 from ..metrics import time_between_fixes
 
@@ -1099,29 +1099,56 @@ def join_vertical(images, fill="white", spacing=10, line_width=1, line_color="bl
     return final_img
 
 
-def saccade_angle_plot(saccades, size=250, color="blue", bgcolor="white",
-        outline="black", center_color="white", center_radius=2):
-    w, h = size, size
-    max_dist = saccades["dist_euclid"].max()
-    scale = w / (2.0 * max_dist)
+def saccade_angle_plot(saccades, size=50, color="blue",
+        figsize=None, alpha=0.5):
 
-    img = Image.new("RGBA", (w, h), bgcolor)
-    draw = ImageDraw.Draw(img)
-    draw.ellipse((2, 2, w - 2, h - 2), outline=outline)
+    max_dist = float(saccades["dist_euclid"].max())
+    fig = pyplot.figure(figsize=figsize)
+    ax = pyplot.subplot(111, polar=True)
 
+    angles = []
+    thetas = []
     for _, row in saccades.iterrows():
         x1, y1 = row["sacc_x1"], row["sacc_y1"]
         x2, y2 = row["sacc_x2"], row["sacc_y2"]
         dist = row["dist_euclid"]
-        x = float(x2 - x1) * scale
-        y = float(y2 - y1) * scale
-        draw.line((w/2, h/2, w/2 + x, h/2 + y), fill=color)
 
-    if center_color is not None:
-        r = center_radius
-        draw.ellipse((w/2 - r, h/2 - r, w/2 + r, h/2 + r), fill=center_color)
-    del draw
-    return img
+        angle = angle_between((x2 - x1, y2 - y1), (1, 0))
+        if y2 < y1:
+            angle = (2 * np.pi) - angle
+
+        angles.append(angle)
+        thetas.append(dist / max_dist)    
+
+    ax.scatter(angles, thetas, s=size, alpha=alpha, color=color)
+    ax.set_yticklabels([])
+    ax.set_ylim((0, 1.05))
+
+    return ax
+
+#def saccade_angle_plot(saccades, size=250, color="blue", bgcolor="white",
+        #outline="black", center_color="white", center_radius=2):
+    #w, h = size, size
+    #max_dist = saccades["dist_euclid"].max()
+    #scale = w / (2.0 * max_dist)
+
+    #img = Image.new("RGBA", (w, h), bgcolor)
+    #draw = ImageDraw.Draw(img)
+    #draw.ellipse((2, 2, w - 2, h - 2), outline=outline)
+
+    #for _, row in saccades.iterrows():
+        #x1, y1 = row["sacc_x1"], row["sacc_y1"]
+        #x2, y2 = row["sacc_x2"], row["sacc_y2"]
+        #dist = row["dist_euclid"]
+        #x = float(x2 - x1) * scale
+        #y = float(y2 - y1) * scale
+        #draw.line((w/2, h/2, w/2 + x, h/2 + y), fill=color)
+
+    #if center_color is not None:
+        #r = center_radius
+        #draw.ellipse((w/2 - r, h/2 - r, w/2 + r, h/2 + r), fill=center_color)
+    #del draw
+    #return img
 
 def transition_centrality_graph(trans_matrix, name_map=None,
         cmap=None, edge_cmap=None, node_size=1200, font_size=18,
@@ -1170,5 +1197,26 @@ def transition_centrality_graph(trans_matrix, name_map=None,
                      vmin=min_bc, vmax=max_bc,
                      linewidths=1.5, edge_color="gray",
                      **kwargs)
+
+    return ax
+
+def trans_steady_state(trans_matrix, name_map=None, ax=None,
+        figsize=None, colors=None):
+    if ax is None:
+        fig, ax = pyplot.subplots(1, 1, figsize=figsize)
+
+    if colors is None:
+        colors = kelly_colors
+
+    ss = steady_state(trans_matrix)
+    if name_map is not None:
+        names = [name_map[i] for i in range(len(ss))]
+    else:
+        names = range(len(ss))
+
+    pandas.Series(ss, index=names).plot(kind="bar", ax=ax, colors=colors)
+    ax.set_title("Steady State Probabilities")
+    ax.set_xlabel("State")
+    ax.set_ylabel("Probability")
 
     return ax

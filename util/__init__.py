@@ -413,3 +413,46 @@ def split_whitespace_tokens(line):
             token += char
     if len(token) > 0:
         yield (token_start, token)
+
+def fixations_to_saccades(fixations):
+    import scipy.spatial
+    saccades = []
+
+    for (exp_id, trial_id), frame in fixations.groupby(["exp_id", "trial_id"]):
+        for (idx1, row1), (idx2, row2) in pairwise(frame.iterrows()):
+            start_ms = row1["end_ms"]
+            end_ms = row2["start_ms"]
+            duration_ms = end_ms - start_ms
+            #assert duration_ms >= 0, duration_ms
+            x1, y1 = row1["fix_x"], row1["fix_y"]
+            x2, y2 = row2["fix_x"], row2["fix_y"]
+            dist_euclid = scipy.spatial.distance.euclidean((x1, y1), (x2, y2))
+            saccades.append([exp_id, trial_id, start_ms, end_ms,
+                x1, y1, x2, y2, duration_ms, dist_euclid])
+
+
+    cols = ["exp_id", "trial_id", "start_ms", "end_ms",
+            "sacc_x1", "sacc_y1", "sacc_x2", "sacc_y2",
+            "duration_ms", "dist_euclid"]
+
+    return pandas.DataFrame(saccades, columns=cols)
+
+def unit_vector(vector):
+    return vector / np.linalg.norm(vector)
+
+def angle_between(v1, v2):
+    v1_u = unit_vector(v1)
+    v2_u = unit_vector(v2)
+    angle = np.arccos(np.dot(v1_u, v2_u))
+    if np.isnan(angle):
+        if (v1_u == v2_u).all():
+            return 0.0
+        else:
+            return np.pi
+    return angle
+
+def steady_state(trans_matrix):
+    import scipy.linalg
+    v, d = scipy.linalg.eig(np.transpose(trans_matrix))
+    max_vi = v.argmax()
+    return d[:, max_vi] / sum(d[:, max_vi])

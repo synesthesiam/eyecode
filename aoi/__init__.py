@@ -11,7 +11,7 @@ from _aoi import scanpath_from_fixations, fixations_from_scanpath, transition_ma
 
 # AOI creation and hit testing
 from _aoi import find_rectangles, hit_test, hit_circle, hit_point, make_grid, \
-        to_line_fixations
+        to_line_fixations, make_polygon
 
 # Fixation viewer methods
 from _aoi import fixations_to_json, aois_to_json
