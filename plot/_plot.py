@@ -1113,8 +1113,8 @@ def saccade_angle_plot(saccades, size=50, color="blue",
         x2, y2 = row["sacc_x2"], row["sacc_y2"]
         dist = row["dist_euclid"]
 
-        angle = angle_between((x2 - x1, y2 - y1), (1, 0))
-        if y2 < y1:
+        angle = angle_between((x2 - x1, y1 - y2), (1, 0))
+        if y1 < y2:
             angle = (2 * np.pi) - angle
 
         angles.append(angle)

@@ -76,7 +76,7 @@ def task_intuitive_aois():
         elif t_kind == "Condition":
             return "condition"
         elif t_kind == "Tuple":
-            return "Tuple"
+            return "tuple"
         else:
             return eyecode.aoi.get_token_category(t_kind)
 

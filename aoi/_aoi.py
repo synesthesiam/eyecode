@@ -484,7 +484,7 @@ def fixations_from_scanpath(scanpath, aoi_rectangles, duration_ms=200,
     """
     if isinstance(aoi_kinds, str):
         kind = aoi_kinds
-        aoi_names = scanpath.unique()
+        aoi_names = set(scanpath)
         aoi_kinds = { n : kind for n in aoi_names }
 
     if isinstance(aoi_rectangles, pandas.DataFrame):
@@ -816,20 +816,22 @@ def get_token_category(token_kind):
     import pygments.token
     from pygments.token import Token
 
-    if token_kind == Token.Name:
-        return "identifier"
-    elif token_kind == Token.Operator \
-            or token_kind == Token.Operator.Word:
+    kind_str = str(token_kind)
+
+    if token_kind == Token.Operator \
+       or token_kind == Token.Operator.Word:
         return "operator"
     elif token_kind == Token.Text:
         return "text"
-    elif token_kind == Token.Keyword \
-            or token_kind == Token.Name.Builtin.Pseudo:
+    elif kind_str.startswith("Token.Keyword") \
+        or token_kind == Token.Name.Builtin.Pseudo:
         return "keyword"
     elif token_kind == Token.Literal.Number.Integer:
         return "integer"
     elif token_kind == Token.Literal.String:
         return "string"
+    elif kind_str.startswith("Token.Name"):
+        return "identifier"
     else:
         return "unknown"
 
@@ -916,7 +918,7 @@ def tokens2d_monospace_aois(tokens2d, font_size=(11, 18),
                 (font_size[1] + line_offset)
 
             # The rectangle extends to the end of the rightmost token AOI
-            max_x = frame.ix[frame.x.argmax()]
+            max_x = frame.ix[frame.x.idxmax()]
             width = max_x["x"] + max_x["width"]
             height = font_size[1] + padding[1]
             line_text = " ".join(frame.sort("x").text.values)

@@ -414,11 +414,11 @@ def split_whitespace_tokens(line):
     if len(token) > 0:
         yield (token_start, token)
 
-def fixations_to_saccades(fixations):
+def fixations_to_saccades(fixations, exp_id=0, trial_id=0):
     import scipy.spatial
     saccades = []
 
-    for (exp_id, trial_id), frame in fixations.groupby(["exp_id", "trial_id"]):
+    def add_saccades(frame):
         for (idx1, row1), (idx2, row2) in pairwise(frame.iterrows()):
             start_ms = row1["end_ms"]
             end_ms = row2["start_ms"]
@@ -429,6 +429,12 @@ def fixations_to_saccades(fixations):
             dist_euclid = scipy.spatial.distance.euclidean((x1, y1), (x2, y2))
             saccades.append([exp_id, trial_id, start_ms, end_ms,
                 x1, y1, x2, y2, duration_ms, dist_euclid])
+
+    if ("exp_id" in fixations.columns):
+        for (exp_id, trial_id), frame in fixations.groupby(["exp_id", "trial_id"]):
+            add_saccades(frame)
+    else:
+        add_saccades(fixations)
 
 
     cols = ["exp_id", "trial_id", "start_ms", "end_ms",
