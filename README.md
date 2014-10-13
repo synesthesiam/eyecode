@@ -1,9 +1,9 @@
 eyeCode
 =======
 
-<img src="img/eyecode_logo.png" />
+<img src="img/eyecode_logo.png" style="width: 325px;" />
 
-A Python library for analyzing programmer gaze data.
+A Python library for analyzing programmer gaze data built on top of [http://pandas.pydata.org/](pandas) and [http://www.scipy.org](scipy).
 The library has the following high-level components:
 
 * Data from real experiments
