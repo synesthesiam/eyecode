@@ -552,7 +552,7 @@ def transition_matrix(scanpath, shape=None, norm=True, aoi_idx=None):
 
     """
     if aoi_idx is None:
-        aoi_idx = { n : i for i, n in enumerate(sorted(scanpath.unique())) }
+        aoi_idx = { n : i for i, n in enumerate(sorted(set(scanpath))) }
 
     if shape is None:
         shape = (len(aoi_idx), len(aoi_idx))
@@ -1624,7 +1624,7 @@ def scanpath_successor(scanpath, alpha, gamma, aoi_idx=None):
     from nltk import ngrams
 
     if aoi_idx is None:
-        aoi_idx = { n : i for i, n in enumerate(sorted(scanpath.unique())) }
+        aoi_idx = { n : i for i, n in enumerate(sorted(set(scanpath))) }
 
     trans_matrix = np.zeros(shape=(len(aoi_idx), len(aoi_idx)))
     id_matrix = np.identity(len(aoi_idx))

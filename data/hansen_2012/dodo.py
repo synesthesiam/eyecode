@@ -413,7 +413,8 @@ def task_trial_metrics():
                           trans_counter[("output_box", "code box")]
                 
             # Spatial density
-            code_box = eyecode.util.filter_aois(trial_aois, "interface", "code box")
+            #code_box = eyecode.util.filter_aois(trial_aois, "interface", "code box")
+            code_box = eyecode.aoi.envelope(eyecode.util.filter_aois(trial_aois, "line"))
             output_box = eyecode.util.filter_aois(trial_aois, "interface", "output box")
 
             num_code_cols = int(np.ceil(code_box["width"] / GRID_AOI_SIZE[0]))
