@@ -15,6 +15,11 @@ var aois = [];
 var aoi_kind = "line";
 var aoi_kinds = [];
 
+// Tags 
+var tags = [];
+var label_kinds = ["success", "info", "inverse", "important", "warning"]
+var tag_label_kinds = [];
+
 var kelly_colors = [
     "#C10020", // Vivid red
     "#53377A", // Strong violet
@@ -57,15 +62,23 @@ function init() {
 
     aoi_kind = $.url().param("kind");
     if (aoi_kind == null) {
-        aoi_kind = "line";
+	// Default aoi kind to display is sub-line 
+        aoi_kind = "sub-line";
     }
 
     $("#screen").attr("src", "screens/" + exp_id + "_" + trial_id + ".png");
+
+   // Load tags
+   jQuery.getJSON("js/trials/" + exp_id + "_" + trial_id + ".tags.js", function(data) {
+   tags = data;
+   var y_offset = 40;
+
 
     // Load AOIs
     jQuery.getJSON("js/trials/" + exp_id + "_" + trial_id + ".aois.js", function(data) {
         aois = data;
         $.each(aois, function(i, aoi) {
+            aoi.y += y_offset;
             if (aoi_kinds.indexOf(aoi.kind) < 0) {
                 aoi_kinds.push(aoi.kind);
             }
@@ -87,6 +100,11 @@ function init() {
         // Load fixations
         jQuery.getJSON("js/trials/" + exp_id + "_" + trial_id + ".fixations.js", function(data) {
             //data.sort(function(a, b) { return a.start - b.start });
+ 
+	       // Offset relative to body 
+               $.each(data, function(i, fix) { 
+                   fix.y += y_offset;	
+           });	
 
             fixes = data;
             fix_i = 0;
@@ -96,6 +114,7 @@ function init() {
         });  // Load fixations
 
     });  // Load AOIs
+});  // Load tags
 }
 
 function animate() {
@@ -265,6 +284,51 @@ function update_progress_bar(fix) {
     $("#progress-bar").get(0).style.width = percent_done + "%";
 }
 
+
+function update_tags(fix) {
+    // Remove previous tags
+    $(".tag").remove();
+
+    // Add labels for each tag
+    $.each(tags, function(t_i, t) {
+        // Check if fixation falls in tag window
+        if ((t.start_ms <= fix.start) && (fix.end <= t.end_ms)) {
+            
+            // Determine % of tag period
+            var tag_time = t.end_ms - t.start_ms;
+            var percent_tag = parseInt(((fix.start - t.start_ms) / tag_time) * 100);
+
+            // Get label kind
+            var label_kind = "";
+            $.each(tag_label_kinds, function(tlk_i, kind) {
+                if (kind == t.kind) {
+                    label_kind = label_kinds[tlk_i % label_kinds.length];
+                }
+            });
+
+           if (label_kind.length == 0) {
+               tag_label_kinds.push(t.kind);
+                label_kind = label_kinds[(tag_label_kinds.length - 1) % label_kinds.length];
+            }
+
+            //Tags of kind "code categories" don't need % specification
+            if (t.kind.match('code categories')){
+                 $("#tags").append("<span " +
+                   "class='tag label label-" + label_kind + "' " +
+                   "title='" + t.description + "'>" +
+               t.kind + " - " + t.name +
+           "</span>");
+            } else{
+              $("#tags").append("<span " +
+                   "class='tag label label-" + label_kind + "' " +
+                   "title='" + t.description + "'>" +
+               t.kind + " - " + t.name + " (" + percent_tag + "%)" +
+           "</span>");            
+            }
+       }
+    });
+}
+
 function show_trailing_fixations(fix) {
     // Remove previous trailing fixations
     $(".trailing-fixation").remove();
@@ -312,6 +376,7 @@ function move_eye(i, fix, delay_ms) {
             set_time_label(fix);
             highlight_aois(fix);
             update_progress_bar(fix);
+            update_tags(fix);
             show_trailing_fixations(fix);
 
             if (playing && (fix_i < (fixes.length - 1))) {

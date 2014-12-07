@@ -1,5 +1,9 @@
-#brand img {
-    margin-right: 3px;
+body {
+    padding-top: 40px;
+}
+
+#brand {
+    margin-left: 5px;
 }
 
 #eye {
@@ -16,7 +20,8 @@
 
 #screen {
     z-index: 0;
-    max-width: none;
+    max-width: inherit;
+    padding-bottom: 40px;
 }
 
 #fix-index {

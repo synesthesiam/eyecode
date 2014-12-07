@@ -1,0 +1,61 @@
+kind,name,description,start_ms,end_ms,trial_id
+type,noun,type of element,0,200,1
+type,verb ,type of element,220,420,1
+type,adjective,type of element,440,640,1
+type,noun,type of element,660,860,1
+type,verb ,type of element,880,1080,1
+type,adjective,type of element,1100,1300,1
+type,noun,type of element,1320,1520,1
+type,verb ,type of element,1540,1740,1
+type,adjective,type of element,1760,1960,1
+type,noun,type of element,1980,2180,1
+type,verb ,type of element,2200,2400,1
+type,adjective,type of element,2420,2620,1
+type,noun,type of element,2640,2840,1
+type,verb ,type of element,2860,3060,1
+type,adjective,type of element,3080,3280,1
+type,noun,type of element,3300,3500,1
+type,verb ,type of element,3520,3720,1
+type,adjective,type of element,3740,3940,1
+type,noun,type of element,3960,4160,1
+type,verb ,type of element,4180,4380,1
+type,adjective,type of element,4400,4600,1
+type,noun,type of element,4620,4820,1
+type,verb ,type of element,4840,5040,1
+type,adjective,type of element,5060,5260,1
+type,noun,type of element,5280,5480,1
+type,verb ,type of element,5500,5700,1
+type,adjective,type of element,5720,5920,1
+type,noun,type of element,5940,6140,1
+type,verb ,type of element,6160,6360,1
+type,adjective,type of element,6380,6580,1
+type,noun,type of element,6600,6800,1
+type,verb ,type of element,6820,7020,1
+type,adjective,type of element,7040,7240,1
+type,noun,type of element,7260,7460,1
+type,verb ,type of element,7480,7680,1
+type,adjective,type of element,7700,7900,1
+type,noun,type of element,7920,8120,1
+type,verb ,type of element,8140,8340,1
+type,adjective,type of element,8360,8560,1
+type,noun,type of element,8580,8780,1
+type,verb ,type of element,8800,9000,1
+type,adjective,type of element,9020,9220,1
+type,noun,type of element,9240,9440,1
+type,verb ,type of element,9460,9660,1
+type,adjective,type of element,9680,9880,1
+type,noun,type of element,9900,10100,1
+type,verb ,type of element,10120,10320,1
+type,adjective,type of element,10340,10540,1
+type,noun,type of element,10560,10760,1
+type,verb ,type of element,10780,10980,1
+type,adjective,type of element,11000,11200,1
+type,noun,type of element,11220,11420,1
+type,verb ,type of element,11440,11640,1
+type,adjective,type of element,11660,11860,1
+type,noun,type of element,11880,12080,1
+type,verb ,type of element,12100,12300,1
+type,adjective,type of element,12320,12520,1
+type,noun,type of element,12540,12740,1
+type,verb ,type of element,12760,12960,1
+type,adjective,type of element,12980,13180,1
