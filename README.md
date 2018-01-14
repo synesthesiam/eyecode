@@ -13,3 +13,19 @@ The library has the following high-level components:
 * Functions for automatically annotating fixations and grading responses
 
 [<a href="http://synesthesiam.github.io/eyecode/">View Documentation</a>]
+
+Packages
+----------
+
+Install the following packages:
+
+* pandas
+* matplotlib
+* scipy
+* tk
+* statsmodels
+
+Getting Started
+-------------------
+
+Install iPython notebook and open examples/Plot.ipynb
